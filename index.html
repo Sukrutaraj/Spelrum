@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Spelrummet</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
+  background:#0a0a14;color:#f0f0f0;
+}
+
+/* Background orbs */
+#bg{position:fixed;inset:0;z-index:0;
+  background:radial-gradient(ellipse at 30% 40%,#1a0f30 0%,#0a0a14 70%);}
+.orb{position:absolute;border-radius:50%;filter:blur(100px);opacity:0.12;
+  animation:orbf linear infinite alternate;}
+@keyframes orbf{from{transform:translate(0,0);}to{transform:translate(40px,-30px);}}
+
+/* Layout */
+#main{
+  position:fixed;inset:0;z-index:10;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:clamp(20px,4vh,44px);
+  padding:clamp(16px,3vw,40px);
+}
+
+/* Title */
+.main-title{
+  font-size:clamp(38px,7vw,80px);
+  font-weight:900;letter-spacing:4px;text-align:center;
+  background:linear-gradient(135deg,#a78bfa 0%,#f0abfc 50%,#60a5fa 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  line-height:1;
+}
+.main-sub{
+  font-size:clamp(11px,1.5vw,15px);
+  letter-spacing:3px;text-transform:uppercase;
+  color:#3a3a5a;margin-top:8px;text-align:center;
+}
+
+/* Room cards */
+.rooms{
+  display:flex;gap:clamp(16px,3vw,36px);
+  flex-wrap:wrap;justify-content:center;
+  width:100%;max-width:900px;
+}
+
+.room-card{
+  flex:1;min-width:clamp(260px,38vw,400px);max-width:440px;
+  background:rgba(255,255,255,0.04);
+  border:2px solid rgba(255,255,255,0.07);
+  border-radius:24px;
+  padding:clamp(24px,4vh,50px) clamp(20px,3vw,40px);
+  cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;
+  gap:clamp(10px,2vh,18px);text-align:center;
+  transition:transform .18s,box-shadow .18s,border-color .18s,background .18s;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;text-decoration:none;color:inherit;
+  position:relative;overflow:hidden;
+}
+.room-card::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 0%,rgba(255,255,255,0.06),transparent 65%);
+  opacity:0;transition:opacity .2s;
+}
+.room-card:hover,.room-card:active{
+  transform:scale(1.04) translateY(-4px);
+  box-shadow:0 18px 55px rgba(0,0,0,0.6);
+}
+.room-card:hover::before,.room-card:active::before{opacity:1;}
+
+/* Touch card */
+.room-touch{
+  border-color:rgba(167,139,250,0.3);
+  background:linear-gradient(145deg,rgba(109,40,217,0.10),rgba(167,139,250,0.05));
+}
+.room-touch:hover{
+  border-color:#a78bfa;
+  box-shadow:0 18px 55px rgba(109,40,217,0.3);
+}
+
+/* MakeyMakey card */
+.room-makey{
+  border-color:rgba(34,197,94,0.3);
+  background:linear-gradient(145deg,rgba(21,128,61,0.10),rgba(34,197,94,0.05));
+}
+.room-makey:hover{
+  border-color:#22c55e;
+  box-shadow:0 18px 55px rgba(34,197,94,0.3);
+}
+
+.room-label{
+  font-size:clamp(10px,1.3vw,13px);
+  letter-spacing:3px;text-transform:uppercase;opacity:0.4;
+}
+.room-icon{
+  font-size:clamp(52px,9vw,88px);line-height:1;
+  filter:drop-shadow(0 4px 14px rgba(0,0,0,0.5));
+  transition:transform .2s;
+}
+.room-card:hover .room-icon,.room-card:active .room-icon{
+  transform:scale(1.15) rotate(-4deg);
+}
+.room-title{
+  font-size:clamp(22px,3.5vw,38px);
+  font-weight:900;letter-spacing:2px;line-height:1.1;
+}
+.room-desc{
+  font-size:clamp(12px,1.5vw,15px);
+  color:#6a6a8a;line-height:1.6;max-width:280px;
+}
+.room-count{
+  font-size:clamp(12px,1.6vw,15px);font-weight:700;
+  padding:5px 18px;border-radius:20px;margin-top:4px;
+}
+.room-touch .room-count{background:rgba(167,139,250,0.15);color:#a78bfa;}
+.room-makey .room-count{background:rgba(34,197,94,0.15);color:#22c55e;}
+
+.room-arrow{
+  font-size:clamp(18px,2.5vw,26px);opacity:0.35;margin-top:4px;
+  transition:transform .18s,opacity .18s;
+}
+.room-card:hover .room-arrow{opacity:0.8;transform:translateX(8px);}
+
+/* Footer */
+.footer{
+  font-size:clamp(10px,1.2vw,12px);
+  color:#1e1e3a;letter-spacing:2px;text-transform:uppercase;
+}
+</style>
+</head>
+<body>
+
+<div id="bg">
+  <div class="orb" style="width:700px;height:700px;background:#7c3aed;top:-200px;left:-200px;animation-duration:18s;"></div>
+  <div class="orb" style="width:600px;height:600px;background:#059669;bottom:-150px;right:-150px;animation-duration:22s;animation-delay:-10s;"></div>
+  <div class="orb" style="width:400px;height:400px;background:#1d4ed8;top:35%;left:35%;animation-duration:15s;animation-delay:-6s;"></div>
+</div>
+
+<div id="main">
+
+  <div>
+    <div class="main-title">🎮 SPELRUMMET</div>
+    <div class="main-sub">Välj spelsamling</div>
+  </div>
+
+  <div class="rooms">
+
+    <a class="room-card room-touch" href="spelrummet_touch.html">
+      <div class="room-label">Spelsamling 1</div>
+      <div class="room-icon">📱</div>
+      <div class="room-title">Spel till<br>Touchskärm</div>
+      <div class="room-desc">
+        14 spel för Samsung Flip, surfplatta och mobil.
+        Peka, dra och tryck!
+      </div>
+      <div class="room-count">14 spel · 5 kategorier</div>
+      <div class="room-arrow">→</div>
+    </a>
+
+    <a class="room-card room-makey" href="spelrummet_makey.html">
+      <div class="room-label">Spelsamling 2</div>
+      <div class="room-icon">🕹️</div>
+      <div class="room-title">Spel till<br>MakeyMakey</div>
+      <div class="room-desc">
+        Spel styrda med piltangenter ↑↓←→.
+        Koppla vad som helst till MakeyMakey!
+      </div>
+      <div class="room-count">7 spel · 3 kategorier</div>
+      <div class="room-arrow">→</div>
+    </a>
+
+  </div>
+
+  <div class="footer">Tryck för att välja spelsamling</div>
+
+</div>
+
+</body>
+</html>
