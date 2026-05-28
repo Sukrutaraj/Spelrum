@@ -657,6 +657,82 @@ touchControls.addEventListener("touchstart", e => {
 }, { passive:false });
 
 })();
+
+
+/* ── Delete deltagarspel ── */
+var DEL_OBF  = [53,7,28,54,5,7,4,118,87,39,44,88,94,22,120,127,6,85,97,40,56,31,63,100,0,104,98,101,42,88,93,87,105,85,3,5,98,1,5,49];
+var DEL_HASH = '705';
+
+function delDecodeToken(pwd){
+  return DEL_OBF.map(function(b,i){
+    return String.fromCharCode(b ^ pwd.charCodeAt(i % pwd.length));
+  }).join('');
+}
+function delCheckPwd(pwd){
+  var h = String(pwd.split('').reduce(function(a,c){ return a + c.charCodeAt(0); }, 0));
+  return h === DEL_HASH;
+}
+
+function deleteGame(gameId, folder, filename){
+  if(!filename){ alert('Filnamn saknas — kan inte ta bort.'); return; }
+  var pwd = prompt('Ange lösenord för att ta bort spelet:');
+  if(!pwd) return;
+  if(!delCheckPwd(pwd)){ alert('Fel lösenord!'); return; }
+  if(!confirm('Ta bort "' + gameId + '" permanent?')) return;
+
+  var token  = delDecodeToken(pwd);
+  var REPO   = 'sukrutaraj/Spelrum';
+  var BRANCH = 'main';
+
+  function getFileSHA(path){
+    return fetch('https://api.github.com/repos/'+REPO+'/contents/'+path+'?ref='+BRANCH, {
+      headers:{ 'Authorization':'token '+token, 'Accept':'application/vnd.github.v3+json' }
+    }).then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){ return d ? d.sha : null; })
+      .catch(function(){ return null; });
+  }
+
+  function deleteFile(path){
+    return getFileSHA(path).then(function(sha){
+      if(!sha){ console.warn('No SHA for', path); return; }
+      return fetch('https://api.github.com/repos/'+REPO+'/contents/'+path, {
+        method: 'DELETE',
+        headers:{
+          'Authorization':'token '+token,
+          'Content-Type':'application/json',
+          'Accept':'application/vnd.github.v3+json'
+        },
+        body: JSON.stringify({ message:'Ta bort: '+filename, sha:sha, branch:BRANCH })
+      });
+    });
+  }
+
+  // Delete html + find and delete meta file
+  deleteFile(folder+'/'+filename)
+  .then(function(){
+    return fetch('https://api.github.com/repos/'+REPO+'/contents/'+folder+'?ref='+BRANCH, {
+      headers:{ 'Authorization':'token '+token, 'Accept':'application/vnd.github.v3+json' }
+    });
+  })
+  .then(function(r){ return r.ok ? r.json() : []; })
+  .then(function(files){
+    var base = filename.replace('.html','').replace(/_[0-9]+$/, '');
+    var meta = files.find(function(f){ return f.name.startsWith('meta_') && f.name.indexOf(base) >= 0; });
+    if(meta) return deleteFile(folder+'/'+meta.name);
+  })
+  .then(function(){
+    alert('Spelet har tagits bort!');
+    // Remove from local arrays and refresh
+    var idx2 = GAMES.findIndex(function(g){ return g.id === gameId; });
+    if(idx2 >= 0){ GAMES.splice(idx2, 1); delete GAME_B64[gameId]; }
+    if(currentCat) showGames(currentCat);
+  })
+  .catch(function(e){
+    alert('Kunde inte ta bort: ' + e.message);
+    console.error(e);
+  });
+}
+
 </script>
 
 </body>
