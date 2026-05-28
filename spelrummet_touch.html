@@ -46,6 +46,20 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 /* ── GAME FRAME ── */
 #viewGame .top-bar{background:rgba(0,0,0,0.92);}
 #gameFrame{flex:1;border:none;width:100%;background:#000;}
+
+.card-del{
+  position:absolute;top:6px;right:6px;
+  width:28px;height:28px;border-radius:50%;
+  background:rgba(220,38,38,0.8);border:none;
+  color:white;font-size:14px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .2s;
+  z-index:5;-webkit-tap-highlight-color:transparent;
+}
+.game-card:hover .card-del,
+.game-card:active .card-del{ opacity:1; }
+.card-del:hover{ background:#dc2626; }
+
 </style>
 </head>
 <body>
@@ -171,22 +185,40 @@ function showGames(cat){
     const card = document.createElement('div');
     card.className = 'game-card';
     card.style.borderColor = cat.color+'30';
+    const isDeltagar = g.category === 'deltagarspel';
+    const folder = isDeltagar ? (g.cat === 'makey' ? 'deltagarspel_makey' : 'deltagarspel_touch') : '';
     card.innerHTML =
       (g.isNew?'<div class="card-new">NY!</div>':'')+
       '<div class="card-emoji">'+g.emoji+'</div>'+
       '<div class="card-name" style="color:'+cat.color+'">'+g.name+'</div>'+
-      '<div class="card-desc">'+g.desc+'</div>';
+      '<div class="card-desc">'+g.desc+'</div>'+
+      (isDeltagar ? '<button class="card-del" title="Ta bort">🗑</button>' : '');
     card.addEventListener('click',()=>openGame(g));
     card.addEventListener('touchend',e=>{e.preventDefault();openGame(g);});
+    if(isDeltagar){
+      const delBtn = card.querySelector('.card-del');
+      if(delBtn){
+        delBtn.addEventListener('click', e=>{
+          e.stopPropagation(); e.preventDefault();
+          deleteGame(g.id, folder, g.file || '');
+        });
+        delBtn.addEventListener('touchend', e=>{
+          e.stopPropagation(); e.preventDefault();
+          deleteGame(g.id, folder, g.file || '');
+        });
+      }
+    }
     grid.appendChild(card);
   });
   if(cat.id==='deltagarspel'){
-    const add = document.createElement('div');
-    add.className = 'game-card add-card';
+    const add = document.createElement('a');
+    add.className = 'game-card';
+    add.href = 'ladda_upp.html';
+    add.style.cssText = 'text-decoration:none;border-color:rgba(167,139,250,0.4);border-style:dashed;background:rgba(167,139,250,0.06);';
     add.innerHTML =
-      '<div class="card-emoji">➕</div>'+
-      '<div class="card-name" style="color:#f0abfc;">Ditt spel här</div>'+
-      '<div class="card-desc">Lägg html-koden i GAMES-listan</div>';
+      '<div class="card-emoji" style="font-size:clamp(28px,4.5vw,48px);">➕</div>'+
+      '<div class="card-name" style="color:#a78bfa;">Lägg till spel</div>'+
+      '<div class="card-desc" style="color:#6a5a8a;">Tryck här för att ladda upp ditt spel</div>';
     grid.appendChild(add);
   }
   const title = document.getElementById('gamesBarTitle');
@@ -257,6 +289,8 @@ async function fetchDeltagar(folder){
           emoji:meta.emoji||'🎮',
           desc:meta.desc||meta.name,
           category:'deltagarspel',
+          cat:meta.cat||'touch',
+          file:meta.file||'',
           isNew:true
         });
       }catch(e){ console.warn('Kunde inte ladda spel:',mf.name,e); }
