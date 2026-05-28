@@ -356,6 +356,59 @@ function setView(id){
 }
 
 buildCats();
+
+/* ══════════════════════════════════════════
+   AUTO-FETCH deltagarspel från GitHub
+   Körs när spelrummet öppnas
+══════════════════════════════════════════ */
+async function fetchDeltagar(folder){
+  try{
+    const apiURL = `https://api.github.com/repos/sukrutaraj/Spelrum/contents/${folder}?ref=main`;
+    const res = await fetch(apiURL, {
+      headers:{'Accept':'application/vnd.github.v3+json'}
+    });
+    if(!res.ok) return;
+    const files = await res.json();
+
+    // Find meta JSON files
+    const metaFiles = files.filter(f=>f.name.startsWith('meta_')&&f.name.endsWith('.json'));
+    
+    for(const mf of metaFiles){
+      try{
+        const mr = await fetch(mf.download_url);
+        const meta = await mr.json();
+        // Check if already in GAMES
+        if(GAMES.find(g=>g.id===mf.name.replace('.json',''))) continue;
+        // Fetch the actual HTML
+        const htmlFile = files.find(f=>f.name===meta.file);
+        if(!htmlFile) continue;
+        const hr = await fetch(htmlFile.download_url);
+        const htmlContent = await hr.text();
+        // Add to GAMES dynamically
+        const gid = mf.name.replace('.json','');
+        GAME_B64[gid] = btoa(unescape(encodeURIComponent(htmlContent)));
+        GAMES.push({
+          id:gid,
+          name:meta.name,
+          emoji:meta.emoji||'🎮',
+          desc:meta.desc||meta.name,
+          category:'deltagarspel',
+          isNew:true
+        });
+      }catch(e){ console.warn('Kunde inte ladda spel:',mf.name,e); }
+    }
+    // Rebuild category view if currently showing deltagarspel
+    if(currentCat && currentCat.id==='deltagarspel'){
+      showGames(currentCat);
+    } else {
+      buildCats();
+    }
+  }catch(e){ console.warn('GitHub fetch failed:',e); }
+}
+
+// Auto-load deltagarspel on startup
+fetchDeltagar('deltagarspel_makey');
+
 </script>
 
 <button id="touchToggle" style="display:none">🎮 Touch</button>
