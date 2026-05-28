@@ -47,7 +47,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 /* Game grid */
 .games-scroll{flex:1;overflow-y:auto;padding:clamp(12px,2vh,22px) clamp(12px,2vw,28px);-webkit-overflow-scrolling:touch;}
 .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(130px,16vw,200px),1fr));gap:clamp(10px,1.8vw,18px);}
-.game-card{background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.08);border-radius:16px;padding:clamp(12px,2vh,20px) 10px;cursor:pointer;text-align:center;transition:transform .15s,background .15s,box-shadow .15s;display:flex;flex-direction:column;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;user-select:none;position:relative;}
+.game-card{position:relative;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.08);border-radius:16px;padding:clamp(12px,2vh,20px) 10px;cursor:pointer;text-align:center;transition:transform .15s,background .15s,box-shadow .15s;display:flex;flex-direction:column;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;user-select:none;position:relative;}
 .game-card:hover,.game-card:active{transform:scale(1.05) translateY(-3px);background:rgba(255,255,255,0.1);box-shadow:0 8px 28px rgba(0,0,0,0.5);}
 .card-emoji{font-size:clamp(28px,4.5vw,52px);line-height:1;transition:transform .2s;}
 .game-card:hover .card-emoji{transform:scale(1.18) rotate(-4deg);}
@@ -96,16 +96,15 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 
 .card-del{
   position:absolute;top:6px;right:6px;
-  width:28px;height:28px;border-radius:50%;
-  background:rgba(220,38,38,0.8);border:none;
-  color:white;font-size:14px;cursor:pointer;
+  width:32px;height:32px;border-radius:50%;
+  background:rgba(220,38,38,0.85);border:none;
+  color:white;font-size:15px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  opacity:0;transition:opacity .2s;
-  z-index:5;-webkit-tap-highlight-color:transparent;
+  opacity:1;
+  z-index:10;-webkit-tap-highlight-color:transparent;
+  box-shadow:0 2px 8px rgba(0,0,0,0.4);
 }
-.game-card:hover .card-del,
-.game-card:active .card-del{ opacity:1; }
-.card-del:hover{ background:#dc2626; }
+.card-del:hover{ background:#dc2626;transform:scale(1.1); }
 
 
 #homeBtn{
@@ -199,7 +198,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 <!-- ══ VIEW 1: CATEGORIES ══ -->
 <div class="view active" id="viewCats">
   <div class="top-bar" style="justify-content:space-between;">
-    <a class="home-btn" href="spelrummet_start.html">🏠 Startsidan</a>
+    
     <div style="text-align:right;">
       <div class="hub-title" style="font-size:clamp(16px,2.5vw,28px);">🕹️ MAKEY MAKEY</div>
     </div>
@@ -220,7 +219,6 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
   <div class="top-bar">
     <button class="back-btn" onclick="showCats()">← Kategorier</button>
     <span class="bar-title" id="gamesBarTitle"></span>
-    <a class="home-btn" href="spelrummet_start.html">🏠</a>
   </div>
   <div class="games-scroll"><div class="cards-grid" id="gameList"></div></div>
 </div>
@@ -230,7 +228,6 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
   <div class="top-bar">
     <button class="back-btn" onclick="closeGame()">← Meny</button>
     <span class="bar-title" id="gameBarTitle"></span>
-    <a class="home-btn" href="spelrummet_start.html">🏠</a>
   </div>
   <iframe id="gameFrame" allowfullscreen></iframe>
 </div>
@@ -337,16 +334,18 @@ function showGames(cat){
       '<div class="card-name" style="color:'+cat.color+'">'+g.name+'</div>'+
       '<div class="card-desc">'+g.desc+'</div>'+
       (isDeltagar ? '<button class="card-del" title="Ta bort">🗑</button>' : '');
-    card.addEventListener('click',()=>openGame(g));
-    card.addEventListener('touchend',e=>{e.preventDefault();openGame(g);});
+    card.addEventListener('click', e=>{
+      if(e.target.classList.contains('card-del')) return;
+      openGame(g);
+    });
+    card.addEventListener('touchend', e=>{
+      if(e.target.classList.contains('card-del')) return;
+      e.preventDefault(); openGame(g);
+    });
     if(isDeltagar){
       const delBtn = card.querySelector('.card-del');
       if(delBtn){
-        delBtn.addEventListener('click', e=>{
-          e.stopPropagation(); e.preventDefault();
-          deleteGame(g.id, folder, g.file || '');
-        });
-        delBtn.addEventListener('touchend', e=>{
+        delBtn.addEventListener('pointerdown', e=>{
           e.stopPropagation(); e.preventDefault();
           deleteGame(g.id, folder, g.file || '');
         });
