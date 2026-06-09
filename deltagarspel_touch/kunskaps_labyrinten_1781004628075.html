@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kunskapslabyrinten</title>
+
+<style>
+html, body{
+    height:100%;
+    margin:0;
+}
+
+body{
+    background:black;
+    color:white;
+    font-family:Arial;
+    text-align:center;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    height:100vh;
+    overflow:hidden;          /* ingen scroll – allt får plats */
+}
+
+#topbar{
+    position:fixed;
+    top:8px;
+    right:10px;
+    z-index:20;
+}
+
+#fsBtn{
+    font-size:14px;
+    padding:6px 12px;
+    cursor:pointer;
+    border-radius:6px;
+    border:1px solid #888;
+    background:#333;
+    color:white;
+}
+
+h1{
+    color:gold;
+    margin:8px 0 2px;
+    font-size:clamp(20px, 4vh, 34px);
+}
+
+#info{
+    font-size:clamp(11px, 1.7vh, 15px);
+    margin:2px 0 6px;
+    color:#ddd;
+}
+
+#hud{
+    font-size:clamp(13px, 2vh, 18px);
+    margin-bottom:6px;
+}
+
+#feedback{
+    min-height:28px;
+    font-size:clamp(15px, 2.4vh, 22px);
+    font-weight:bold;
+    margin:4px 0;
+}
+
+canvas{
+    background:black;
+    border:2px solid white;
+    display:block;
+    width:min(66vh, 92vw);    /* skalas för att passa skärmen */
+    height:min(66vh, 92vw);
+}
+
+/* Frågan visas som en ruta MITT på skärmen – alltid synlig */
+#questionBox{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.88);
+    z-index:50;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+}
+
+#questionBox.show{
+    display:flex;
+}
+
+#questionInner{
+    background:#222;
+    border:3px solid white;
+    border-radius:14px;
+    padding:26px 30px;
+    width:560px;
+    max-width:90vw;
+}
+
+#questionText{
+    font-size:clamp(20px, 4.2vh, 32px);
+    margin:0 0 20px;
+}
+
+.answer{
+    font-size:clamp(18px, 3.3vh, 28px);
+    margin:16px 0;
+}
+
+.answer b{
+    color:gold;
+}
+</style>
+
+</head>
+
+<body>
+
+<div id="topbar">
+    <button id="fsBtn">🖥️ Helskärm</button>
+</div>
+
+<h1>🧩 Kunskapslabyrinten</h1>
+
+<div id="info">
+Pilar = gå ett steg i taget &nbsp;•&nbsp; ⬆️ / ⬇️ / ␣ = svara &nbsp;•&nbsp; ␣ = nästa nivå / börja om
+</div>
+
+<div id="hud">
+    🎚️ Nivå: <span id="levelEl">1</span> (<span id="levelNameEl">Lätt</span>)
+    &nbsp;|&nbsp; ❤️ Liv: <span id="livesEl">3</span>
+    &nbsp;|&nbsp; 🚪 Portar kvar: <span id="doorsEl">4</span>
+</div>
+
+<canvas id="game" width="420" height="420"></canvas>
+
+<div id="feedback"></div>
+
+<div id="questionBox">
+    <div id="questionInner">
+        <h2 id="questionText"></h2>
+        <div class="answer"><b>⬆️ Pil upp:</b> <span id="answer0"></span></div>
+        <div class="answer"><b>⬇️ Pil ner:</b> <span id="answer1"></span></div>
+        <div class="answer"><b>␣ Mellanslag:</b> <span id="answer2"></span></div>
+    </div>
+</div>
+
+<script>
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const questionBox = document.getElementById("questionBox");
+const questionText = document.getElementById("questionText");
+const answer0 = document.getElementById("answer0");
+const answer1 = document.getElementById("answer1");
+const answer2 = document.getElementById("answer2");
+
+const levelEl = document.getElementById("levelEl");
+const levelNameEl = document.getElementById("levelNameEl");
+const livesEl = document.getElementById("livesEl");
+const doorsEl = document.getElementById("doorsEl");
+const feedbackEl = document.getElementById("feedback");
+const fsBtn = document.getElementById("fsBtn");
+
+const tileSize = 20;
+const rows = 21;
+const cols = 21;
+const START_LIVES = 3;
+
+let map = [];
+let player;
+let exit;
+
+let level = 1;
+let running = false;
+let gameWon = false;
+let gameOver = false;
+let levelCleared = false;
+let lives = START_LIVES;
+
+let questionActive = false;
+let currentDoor = null;
+let currentQuestion = null;
+
+let doors = [];
+
+let feedback = "";
+let feedbackColor = "white";
+let feedbackUntil = 0;
+
+
+/* ---------- FRÅGOR I TRE SVÅRIGHETSNIVÅER ---------- */
+
+const easyQuestions = [
+    { question: "Vad är Sveriges huvudstad?", answers: ["Göteborg","Stockholm","Malmö"], correct: 1 },
+    { question: "Vad blir 7 + 5?", answers: ["12","10","13"], correct: 0 },
+    { question: "Hur många ben har en spindel?", answers: ["6","8","10"], correct: 1 },
+    { question: "Vilken planet bor vi på?", answers: ["Mars","Jupiter","Jorden"], correct: 2 },
+    { question: "Vilken färg får man av blått och gult?", answers: ["Grön","Röd","Lila"], correct: 0 },
+    { question: "Hur många dagar har en vecka?", answers: ["5","6","7"], correct: 2 },
+    { question: "Vad blir 9 × 3?", answers: ["27","21","24"], correct: 0 },
+    { question: "Vilket djur säger mjau?", answers: ["Hund","Katt","Ko"], correct: 1 },
+    { question: "Vad blir 20 - 8?", answers: ["10","12","14"], correct: 1 },
+    { question: "Vilken färg har gräs?", answers: ["Grön","Blå","Orange"], correct: 0 },
+    { question: "Hur många månader finns det på ett år?", answers: ["10","12","14"], correct: 1 },
+    { question: "Vilken årstid kommer efter sommaren?", answers: ["Vintern","Våren","Hösten"], correct: 2 },
+    { question: "Hur många timmar är ett dygn?", answers: ["12","24","36"], correct: 1 },
+    { question: "Vad heter vår världsdel?", answers: ["Europa","Afrika","Asien"], correct: 0 },
+    { question: "Vilket djur kan flyga?", answers: ["Fisk","Fågel","Orm"], correct: 1 }
+];
+
+const mediumQuestions = [
+    { question: "Vad är Norges huvudstad?", answers: ["Oslo","Bergen","Helsingfors"], correct: 0 },
+    { question: "Vad blir 12 × 6?", answers: ["66","72","78"], correct: 1 },
+    { question: "Hur många sidor har en hexagon?", answers: ["5","6","8"], correct: 1 },
+    { question: "Vid vilken temperatur fryser vatten? (°C)", answers: ["0","10","-10"], correct: 0 },
+    { question: "Vilket är det största landdjuret?", answers: ["Noshörning","Elefant","Flodhäst"], correct: 1 },
+    { question: "Hur många världsdelar finns det?", answers: ["5","6","7"], correct: 2 },
+    { question: "Vad blir 144 ÷ 12?", answers: ["12","14","16"], correct: 0 },
+    { question: "Vilken är Sveriges näst största stad?", answers: ["Malmö","Uppsala","Göteborg"], correct: 2 },
+    { question: "Vad kallas processen där växter gör energi av solljus?", answers: ["Andning","Fotosyntes","Avdunstning"], correct: 1 },
+    { question: "Hur många minuter är 2,5 timmar?", answers: ["120","150","180"], correct: 1 },
+    { question: "Vilket grundämne har beteckningen O?", answers: ["Syre","Guld","Väte"], correct: 0 },
+    { question: "Vad kallas en figur med tre sidor?", answers: ["Kvadrat","Triangel","Cirkel"], correct: 1 },
+    { question: "Vilket hav ligger öster om Sverige?", answers: ["Nordsjön","Östersjön","Medelhavet"], correct: 1 },
+    { question: "Hur många ben har en insekt?", answers: ["6","8","4"], correct: 0 },
+    { question: "Vad blir 15 × 4?", answers: ["45","60","75"], correct: 1 }
+];
+
+const hardQuestions = [
+    { question: "Vad är kvadratroten ur 144?", answers: ["10","12","14"], correct: 1 },
+    { question: "Vilken är Europas längsta flod?", answers: ["Donau","Rhen","Volga"], correct: 2 },
+    { question: "Vilket grundämne har beteckningen Fe?", answers: ["Järn","Koppar","Bly"], correct: 0 },
+    { question: "Hur många grader är vinklarna i en triangel tillsammans?", answers: ["90","180","360"], correct: 1 },
+    { question: "Vilket är det minsta primtalet?", answers: ["0","1","2"], correct: 2 },
+    { question: "Vilken planet är störst i vårt solsystem?", answers: ["Saturnus","Jupiter","Neptunus"], correct: 1 },
+    { question: "Vad kallas en figur med sju sidor?", answers: ["Hexagon","Heptagon","Oktagon"], correct: 1 },
+    { question: "Hur många millimeter går det på en meter?", answers: ["100","1000","10000"], correct: 1 },
+    { question: "Vad blir 13 × 13?", answers: ["156","169","196"], correct: 1 },
+    { question: "Vilket är det hårdaste naturliga ämnet?", answers: ["Granit","Stål","Diamant"], correct: 2 },
+    { question: "Vilken är världens högsta bergstopp?", answers: ["K2","Mount Everest","Mont Blanc"], correct: 1 },
+    { question: "Vilket datum är Sveriges nationaldag?", answers: ["6 juni","1 maj","24 december"], correct: 0 },
+    { question: "Hur många sekunder går det på en timme?", answers: ["360","1600","3600"], correct: 2 },
+    { question: "Vilket grundämne är vanligast i universum?", answers: ["Syre","Väte","Kol"], correct: 1 },
+    { question: "Vad kallas läran om stjärnor och rymden?", answers: ["Geologi","Astronomi","Biologi"], correct: 1 }
+];
+
+const levels = [
+    { name: "Lätt",  doors: 4, pool: easyQuestions },
+    { name: "Medel", doors: 5, pool: mediumQuestions },
+    { name: "Svår",  doors: 6, pool: hardQuestions }
+];
+
+
+function shuffle(arr){
+    for(let i = arr.length - 1; i > 0; i--){
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+
+/* ---------- LABYRINT ---------- */
+
+function generateMaze(){
+
+    map = [];
+    for(let y = 0; y < rows; y++){
+        map[y] = [];
+        for(let x = 0; x < cols; x++) map[y][x] = 1;
+    }
+
+    const stack = [];
+    map[1][1] = 0;
+    stack.push({ x: 1, y: 1 });
+
+    const dirs = [
+        { x: 0, y: -2 }, { x: 0, y: 2 },
+        { x: -2, y: 0 }, { x: 2, y: 0 }
+    ];
+
+    while(stack.length){
+        const cur = stack[stack.length - 1];
+        const neighbors = [];
+        for(const d of dirs){
+            const nx = cur.x + d.x;
+            const ny = cur.y + d.y;
+            if(nx > 0 && ny > 0 && nx < cols - 1 && ny < rows - 1 && map[ny][nx] === 1){
+                neighbors.push({ x: nx, y: ny, wx: cur.x + d.x / 2, wy: cur.y + d.y / 2 });
+            }
+        }
+        if(neighbors.length){
+            const n = neighbors[Math.floor(Math.random() * neighbors.length)];
+            map[n.wy][n.wx] = 0;
+            map[n.y][n.x] = 0;
+            stack.push({ x: n.x, y: n.y });
+        } else {
+            stack.pop();
+        }
+    }
+
+    player = { x: 1, y: 1 };
+    exit = { x: cols - 2, y: rows - 2 };
+    map[player.y][player.x] = 0;
+    map[exit.y][exit.x] = 0;
+}
+
+function findPath(start, end){
+    const key = (x, y) => x + "_" + y;
+    const queue = [start];
+    const came = {};
+    const seen = new Set([key(start.x, start.y)]);
+    const dirs = [
+        { x: 0, y: -1 }, { x: 0, y: 1 },
+        { x: -1, y: 0 }, { x: 1, y: 0 }
+    ];
+    let found = false;
+
+    while(queue.length){
+        const c = queue.shift();
+        if(c.x === end.x && c.y === end.y){ found = true; break; }
+        for(const d of dirs){
+            const nx = c.x + d.x;
+            const ny = c.y + d.y;
+            if(nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue;
+            if(map[ny][nx] === 1) continue;
+            const k = key(nx, ny);
+            if(seen.has(k)) continue;
+            seen.add(k);
+            came[k] = { x: c.x, y: c.y };
+            queue.push({ x: nx, y: ny });
+        }
+    }
+
+    if(!found) return [];
+    const path = [];
+    let cur = { x: end.x, y: end.y };
+    while(!(cur.x === start.x && cur.y === start.y)){
+        path.push(cur);
+        cur = came[key(cur.x, cur.y)];
+    }
+    path.push(start);
+    path.reverse();
+    return path;
+}
+
+function placeDoors(doorCount, pool){
+    doors = [];
+    const path = findPath(player, exit);
+    const interior = path.slice(1, path.length - 1);
+    const count = Math.min(doorCount, interior.length, pool.length);
+    const qOrder = shuffle([...Array(pool.length).keys()]).slice(0, count);
+    const usedIdx = new Set();
+
+    for(let i = 0; i < count; i++){
+        let idx = Math.round((i + 1) * interior.length / (count + 1));
+        if(idx < 0) idx = 0;
+        if(idx >= interior.length) idx = interior.length - 1;
+        while(usedIdx.has(idx)) idx = (idx + 1) % interior.length;
+        usedIdx.add(idx);
+        const cell = interior[idx];
+        map[cell.y][cell.x] = 3;
+        doors.push({ x: cell.x, y: cell.y, q: pool[qOrder[i]] });
+    }
+}
+
+
+/* ---------- SPELFLÖDE ---------- */
+
+function startLevel(){
+    const cfg = levels[level - 1];
+    generateMaze();
+    placeDoors(cfg.doors, cfg.pool);
+    lives = START_LIVES;
+    running = true;
+    gameWon = false;
+    gameOver = false;
+    levelCleared = false;
+    questionActive = false;
+    currentDoor = null;
+    currentQuestion = null;
+    questionBox.classList.remove("show");
+}
+
+function startNewGame(){
+    level = 1;
+    feedback = "";
+    startLevel();
+}
+
+function nextLevel(){
+    level++;
+    startLevel();
+}
+
+function setFeedback(text, color){
+    feedback = text;
+    feedbackColor = color;
+    feedbackUntil = Date.now() + 1800;
+}
+
+function showQuestion(door){
+    questionActive = true;
+    running = false;
+    currentDoor = door;
+    currentQuestion = door.q;
+    questionText.textContent = currentQuestion.question;
+    answer0.textContent = currentQuestion.answers[0];
+    answer1.textContent = currentQuestion.answers[1];
+    answer2.textContent = currentQuestion.answers[2];
+    questionBox.classList.add("show");
+}
+
+function handleAnswer(selected){
+    if(selected === currentQuestion.correct){
+        map[currentDoor.y][currentDoor.x] = 0;
+        doors = doors.filter(d => !(d.x === currentDoor.x && d.y === currentDoor.y));
+        setFeedback("✅ Rätt! Porten öppnas.", "lime");
+    } else {
+        lives--;
+        setFeedback("❌ Fel svar! Försök igen.", "red");
+        if(lives <= 0){
+            gameOver = true;
+            setFeedback("💀 Slut på liv!", "red");
+        }
+    }
+    questionBox.classList.remove("show");
+    questionActive = false;
+    running = !gameOver;
+}
+
+function moveStep(mx, my){
+    if(!running || questionActive || gameWon || gameOver || levelCleared) return;
+    const nx = player.x + mx;
+    const ny = player.y + my;
+    if(nx < 0 || ny < 0 || nx >= cols || ny >= rows) return;
+
+    const cell = map[ny][nx];
+    if(cell === 1) return;
+    if(cell === 3){
+        const door = doors.find(d => d.x === nx && d.y === ny);
+        if(door) showQuestion(door);
+        return;
+    }
+
+    player.x = nx;
+    player.y = ny;
+
+    if(player.x === exit.x && player.y === exit.y){
+        running = false;
+        if(level < levels.length){
+            levelCleared = true;
+            setFeedback("🎉 Nivå " + level + " klar!", "lime");
+        } else {
+            gameWon = true;
+            setFeedback("🏆 Du klarade alla nivåer!", "gold");
+        }
+    }
+}
+
+
+/* ---------- HELSKÄRM ---------- */
+
+function toggleFullscreen(){
+    if(!document.fullscreenElement){
+        if(document.documentElement.requestFullscreen){
+            document.documentElement.requestFullscreen().catch(()=>{});
+        }
+    } else {
+        if(document.exitFullscreen){
+            document.exitFullscreen().catch(()=>{});
+        }
+    }
+    fsBtn.blur(); // så att mellanslag inte råkar trycka på knappen
+}
+
+fsBtn.addEventListener("click", toggleFullscreen);
+
+document.addEventListener("fullscreenchange", ()=>{
+    fsBtn.textContent = document.fullscreenElement ? "🖥️ Avsluta helskärm" : "🖥️ Helskärm";
+});
+
+
+/* ---------- TANGENTER (MakeyMakey) ---------- */
+
+document.addEventListener("keydown",(e)=>{
+
+    if(e.repeat) return;                 // ett steg / en handling per tryck
+    const key = e.key;
+
+    // Under en fråga: ⬆️ ⬇️ ␣ = svar
+    if(questionActive){
+        let selected = -1;
+        if(key === "ArrowUp") selected = 0;
+        else if(key === "ArrowDown") selected = 1;
+        else if(key === " ") selected = 2;
+        if(selected !== -1){ e.preventDefault(); handleAnswer(selected); }
+        return;
+    }
+
+    // Nivå klar: mellanslag = nästa nivå
+    if(levelCleared){
+        if(key === " "){ e.preventDefault(); nextLevel(); }
+        return;
+    }
+
+    // Vinst / förlust: mellanslag = nytt spel
+    if(gameWon || gameOver){
+        if(key === " "){ e.preventDefault(); startNewGame(); }
+        return;
+    }
+
+    // Normal rörelse
+    if(key === " "){ e.preventDefault(); startNewGame(); return; }
+    if(key === "ArrowUp"){ e.preventDefault(); moveStep(0, -1); }
+    else if(key === "ArrowDown"){ e.preventDefault(); moveStep(0, 1); }
+    else if(key === "ArrowLeft"){ e.preventDefault(); moveStep(-1, 0); }
+    else if(key === "ArrowRight"){ e.preventDefault(); moveStep(1, 0); }
+});
+
+
+/* ---------- RITNING ---------- */
+
+function draw(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for(let y = 0; y < rows; y++){
+        for(let x = 0; x < cols; x++){
+            if(map[y][x] === 1){
+                ctx.fillStyle = "blue";
+                ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+            }
+            if(map[y][x] === 3){
+                ctx.fillStyle = "brown";
+                ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+                ctx.fillStyle = "white";
+                ctx.font = "14px Arial";
+                ctx.fillText("?", x * tileSize + 6, y * tileSize + 15);
+            }
+        }
+    }
+
+    ctx.fillStyle = "lime";
+    ctx.fillRect(exit.x * tileSize, exit.y * tileSize, tileSize, tileSize);
+
+    ctx.fillStyle = "orange";
+    ctx.beginPath();
+    ctx.arc(
+        player.x * tileSize + tileSize / 2,
+        player.y * tileSize + tileSize / 2,
+        tileSize / 2 - 2, 0, Math.PI * 2
+    );
+    ctx.fill();
+
+    drawMessages();
+    updateHud();
+}
+
+function drawMessages(){
+    if(gameWon || gameOver || levelCleared){
+        ctx.fillStyle = "rgba(0,0,0,0.8)";
+        ctx.fillRect(0, 140, canvas.width, 120);
+    }
+    ctx.textAlign = "center";
+
+    if(levelCleared){
+        ctx.fillStyle = "lime";
+        ctx.font = "26px Arial";
+        ctx.fillText("🎉 Nivå " + level + " klar!", canvas.width / 2, 180);
+        ctx.fillStyle = "white";
+        ctx.font = "16px Arial";
+        ctx.fillText("Nu blir det svårare!", canvas.width / 2, 210);
+        ctx.fillText("Tryck mellanslag för nästa nivå", canvas.width / 2, 235);
+    }
+    if(gameWon){
+        ctx.fillStyle = "gold";
+        ctx.font = "28px Arial";
+        ctx.fillText("🏆 DU VANN!", canvas.width / 2, 180);
+        ctx.fillStyle = "white";
+        ctx.font = "16px Arial";
+        ctx.fillText("Du klarade alla tre nivåerna!", canvas.width / 2, 210);
+        ctx.fillText("Tryck mellanslag för nytt spel", canvas.width / 2, 235);
+    }
+    if(gameOver){
+        ctx.fillStyle = "red";
+        ctx.font = "28px Arial";
+        ctx.fillText("💀 GAME OVER", canvas.width / 2, 180);
+        ctx.fillStyle = "white";
+        ctx.font = "16px Arial";
+        ctx.fillText("Tryck mellanslag för att börja om", canvas.width / 2, 220);
+    }
+    ctx.textAlign = "left";
+}
+
+function updateHud(){
+    levelEl.textContent = level;
+    levelNameEl.textContent = levels[level - 1].name;
+    livesEl.textContent = lives;
+    doorsEl.textContent = doors.length;
+    feedbackEl.textContent = feedback;
+    feedbackEl.style.color = feedbackColor;
+}
+
+function gameLoop(){
+    if(feedback && Date.now() > feedbackUntil && !gameWon && !gameOver && !levelCleared){
+        feedback = "";
+    }
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+startNewGame();
+gameLoop();
+
+</script>
+
+</body>
+</html>
