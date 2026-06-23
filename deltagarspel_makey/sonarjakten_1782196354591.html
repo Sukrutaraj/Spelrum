@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sonarjakten</title>
+
+<style>
+html, body{ height:100%; margin:0; }
+
+body{
+    background:black;
+    color:white;
+    font-family:Arial;
+    text-align:center;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    height:100vh;
+    overflow:hidden;
+}
+
+#topbar{ position:fixed; top:8px; right:10px; z-index:20; }
+
+#fsBtn, #voiceBtn{
+    font-size:14px;
+    padding:6px 12px;
+    cursor:pointer;
+    border-radius:6px;
+    border:1px solid #888;
+    background:#333;
+    color:white;
+    margin-left:6px;
+}
+
+h1{ color:gold; margin:8px 0 2px; font-size:clamp(20px, 4vh, 34px); }
+
+#info{ font-size:clamp(11px, 1.7vh, 15px); margin:2px 0 6px; color:#ddd; line-height:1.5; }
+
+#hud{ font-size:clamp(13px, 2vh, 18px); margin-bottom:6px; }
+
+#feedback{
+    min-height:28px;
+    font-size:clamp(15px, 2.4vh, 22px);
+    font-weight:bold;
+    margin:4px 0;
+}
+
+canvas{
+    background:black;
+    border:2px solid white;
+    display:block;
+    width:min(60vh, 92vw);
+    height:min(60vh, 92vw);
+}
+
+#hint{ font-size:clamp(10px,1.5vh,13px); color:#888; margin-top:6px; }
+</style>
+</head>
+
+<body>
+
+<div id="topbar">
+    <button id="voiceBtn">🔊 Ljud på</button>
+    <button id="fsBtn">🖥️ Helskärm</button>
+</div>
+
+<h1>🔊 Sonarjakten</h1>
+
+<div id="info">
+Pilar = gå &nbsp;•&nbsp; ␣ Mellanslag = gräv / starta &nbsp;•&nbsp; Enter (eller Ctrl / Insert) = extra pip<br>
+🔔 Vägg = klocka &nbsp;•&nbsp; 👾 Fiende = hårt, mörkt ljud &nbsp;•&nbsp; 📡 Skatt = mjukt pip (snabbare &amp; ljusare ju närmare)
+</div>
+
+<div id="hud">
+    🎯 <span id="diffEl">–</span>
+    &nbsp;|&nbsp; 🗺️ Runda: <span id="roundEl">1</span>
+    &nbsp;|&nbsp; ❤️ Liv: <span id="livesEl">3</span>
+    &nbsp;|&nbsp; 👣 Steg: <span id="stepsEl">0</span>
+    &nbsp;|&nbsp; ⛏️ <span id="digsEl">0</span>
+</div>
+
+<canvas id="game" width="440" height="440"></canvas>
+
+<div id="feedback"></div>
+
+<div id="hint">Väggar, fiende och skatt visas svagt – endast som hjälp för seende medhjälpare. Spelaren styr helt med ljudet.</div>
+
+<script>
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const diffEl = document.getElementById("diffEl");
+const roundEl = document.getElementById("roundEl");
+const livesEl = document.getElementById("livesEl");
+const stepsEl = document.getElementById("stepsEl");
+const digsEl = document.getElementById("digsEl");
+const feedbackEl = document.getElementById("feedback");
+const fsBtn = document.getElementById("fsBtn");
+const voiceBtn = document.getElementById("voiceBtn");
+
+/* ---------- SVÅRIGHETSGRADER ---------- */
+const DIFFS = {
+    latt:   { name:"Lätt",   startSize:7,  maxSize:11, grow:2, wallPct:0,    enemy:false, enemyMs:0   },
+    mellan: { name:"Mellan", startSize:9,  maxSize:13, grow:2, wallPct:0.12, enemy:false, enemyMs:0   },
+    svar:   { name:"Svår",   startSize:11, maxSize:13, grow:1, wallPct:0.15, enemy:true,  enemyMs:780 }
+};
+const DIFF_ORDER = ["latt", "mellan", "svar"];
+
+/* ---------- FIENDENS SVÅRIGHET (tre nivåer) ----------
+   ms      = grundtempo (högre = långsammare)   msMin = snabbaste tempo
+   ramp    = hur mycket snabbare per runda       chase = hur ofta den går mot spelaren (0–1)
+   range   = hur långt bort den börjar höras      retreat = andrum (ms) efter en träff      */
+const ENEMY_DIFFS = {
+    latt:  { name:"lätt fiende",  short:"lätt",  ms:1150, msMin:850, ramp:25, chase:0.30, range:8, retreat:2600 },
+    medel: { name:"medel fiende", short:"medel", ms:950,  msMin:650, ramp:45, chase:0.45, range:7, retreat:2100 },
+    svar:  { name:"svår fiende",  short:"svår",  ms:780,  msMin:420, ramp:60, chase:0.60, range:6, retreat:1800 }
+};
+
+/* ---------- SPELTILLSTÅND ---------- */
+let difficulty = "latt";
+let enemyLevel = "medel";        // vald fiende-nivå (latt | medel | svar)
+let enemyChase = 0.6;            // sätts från ENEMY_DIFFS i buildBoard
+let enemyRange = 6;
+let enemyRetreat = 1800;
+let state = "menu";              // menu | enemymenu | play | won | over
+let cols = 7, rows = 7;
+let wall = [];                   // wall[y][x] = true om vägg
+let player = { x:0, y:0 };
+let treasure = { x:0, y:0 };
+let enemy = { x:0, y:0, active:false, cooldown:0 };
+let curEnemyMs = 780;
+let round = 1;
+let lives = 3;
+let steps = 0;
+let digs = 0;
+
+let feedback = "";
+let feedbackColor = "white";
+let feedbackUntil = 0;
+
+/* ---------- RÖST / LJUD ---------- */
+let voiceOn = true;
+let primed = false;
+let svVoice = null;
+let speaking = false;
+let frozen = false;           // sant medan instruktioner läses upp – då står allt still
+let freezeTimer = null;
+let audioCtx = null;
+
+function pickVoice(){
+    if(!("speechSynthesis" in window)) return;
+    const vs = speechSynthesis.getVoices();
+    svVoice = vs.find(v => v.lang && v.lang.toLowerCase().startsWith("sv")) || null;
+}
+if("speechSynthesis" in window){
+    pickVoice();
+    speechSynthesis.onvoiceschanged = pickVoice;
+}
+
+function speakRaw(text, cancel){
+    if(!voiceOn || !("speechSynthesis" in window) || !text) return;
+    try{
+        if(cancel) speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "sv-SE";
+        if(svVoice) u.voice = svVoice;
+        u.rate = 0.98;
+        u.onstart = () => { speaking = true; };
+        u.onend   = () => { speaking = false; };
+        u.onerror = () => { speaking = false; };
+        speechSynthesis.speak(u);
+    }catch(e){ speaking = false; }
+}
+function speak(text){ speakRaw(text, true); }
+
+/* Läser upp en instruktion och håller spelet helt stilla tills uppläsningen är klar. */
+function speakInstruction(text){
+    frozen = true;
+    if(freezeTimer){ clearTimeout(freezeTimer); freezeTimer = null; }
+    // säkerhetsnät: lossa frysningen även om onend inte skulle infrias
+    const safetyMs = Math.min(25000, 3000 + text.length * 120);
+    freezeTimer = setTimeout(() => { frozen = false; freezeTimer = null; }, safetyMs);
+
+    if(!voiceOn || !("speechSynthesis" in window) || !text){
+        frozen = false;                         // inget tal → ingen frysning
+        if(freezeTimer){ clearTimeout(freezeTimer); freezeTimer = null; }
+        return;
+    }
+    function release(){
+        speaking = false;
+        frozen = false;
+        if(freezeTimer){ clearTimeout(freezeTimer); freezeTimer = null; }
+    }
+    try{
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "sv-SE";
+        if(svVoice) u.voice = svVoice;
+        u.rate = 0.98;
+        u.onstart = () => { speaking = true; };
+        u.onend   = release;
+        u.onerror = release;
+        speechSynthesis.speak(u);
+    }catch(e){ release(); }
+}
+
+function ensureAudio(){
+    if(!audioCtx){
+        try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        catch(e){ audioCtx = null; }
+    }
+    if(audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+}
+
+function panFor(targetX){
+    const half = (cols - 1) / 2;
+    return half === 0 ? 0 : Math.max(-1, Math.min(1, (targetX - player.x) / half));
+}
+
+/* Skatt-pipet: ren, ljus sinuston. */
+function playPing(freq, pan, dur){
+    if(!audioCtx || !voiceOn) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.22, t + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    let last = gain;
+    if(audioCtx.createStereoPanner){
+        const panner = audioCtx.createStereoPanner();
+        panner.pan.value = Math.max(-1, Math.min(1, pan));
+        gain.connect(panner);
+        last = panner;
+    }
+    osc.connect(gain);
+    last.connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.02);
+}
+
+/* FIENDE = hårt, mörkt, strävt growl – helt skilt från skatt och klocka. */
+function playEnemy(freq, pan, dur){
+    if(!audioCtx || !voiceOn) return;
+    const t = audioCtx.currentTime;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.2, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    let last = gain;
+    if(audioCtx.createStereoPanner){
+        const panner = audioCtx.createStereoPanner();
+        panner.pan.value = Math.max(-1, Math.min(1, pan));
+        gain.connect(panner);
+        last = panner;
+    }
+    last.connect(audioCtx.destination);
+    // två orenstämda sågtänder + en oktav över = strävt och hårt
+    [freq, freq * 1.015, freq * 2].forEach(f => {
+        const o = audioCtx.createOscillator();
+        o.type = "sawtooth";
+        o.frequency.value = f;
+        o.connect(gain);
+        o.start(t);
+        o.stop(t + dur + 0.02);
+    });
+}
+
+/* Korta icke-verbala effekter, med tydligt olika klangfärg. */
+function playEffect(freq, dur, type){
+    if(!audioCtx || !voiceOn) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type || "sine";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.3, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t); osc.stop(t + dur + 0.02);
+}
+
+/* VÄGG/KANT = ringklocka: ljus, metallisk klang som klingar ut. */
+function playBell(){
+    if(!audioCtx || !voiceOn) return;
+    const t = audioCtx.currentTime;
+    const fund = 784;   // ljus, tydlig grundton
+    const partials = [
+        { ratio:1.0,  gain:0.30, dur:0.55 },
+        { ratio:2.0,  gain:0.15, dur:0.42 },
+        { ratio:2.96, gain:0.10, dur:0.30 },
+        { ratio:4.20, gain:0.06, dur:0.22 }
+    ];
+    for(const p of partials){
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = fund * p.ratio;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(p.gain, t + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + p.dur);
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start(t); osc.stop(t + p.dur + 0.02);
+    }
+}
+
+function playMiss(){ playEffect(196, 0.18, "sine"); }    // mjuk låg ton = inget här
+function playFound(){                                      // glad stigande klang = skatt!
+    [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playEffect(f, 0.18, "sine"), i * 130));
+}
+function playCaught(){                                     // hårt, fallande = fienden tog dig
+    [220, 160, 110].forEach((f, i) => setTimeout(() => playEffect(f, 0.16, "sawtooth"), i * 110));
+}
+
+/* ---------- AVSTÅND ---------- */
+function dist(){ return Math.abs(treasure.x - player.x) + Math.abs(treasure.y - player.y); }
+function maxDist(){ return (cols - 1) + (rows - 1); }
+function closeness(){ return 1 - dist() / maxDist(); }
+function cheby(a, b){ return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)); }
+
+function pingFreq(){ return 300 + closeness() * 600; }
+function pingInterval(){ return 720 - closeness() * 580; }
+
+/* ---------- LOOPAR ---------- */
+function pingLoop(){
+    if(state === "play" && voiceOn && primed && !speaking && !frozen && audioCtx){
+        playPing(pingFreq(), panFor(treasure.x), 0.09);
+        setTimeout(pingLoop, pingInterval());
+    } else {
+        setTimeout(pingLoop, 180);
+    }
+}
+
+function enemyAudioLoop(){
+    let delay = 200;
+    if(state === "play" && enemy.active && voiceOn && primed && !speaking && !frozen && audioCtx
+       && Date.now() > enemy.cooldown){
+        const range = enemyRange;
+        const d = cheby(enemy, player);
+        if(d <= range){
+            const c = 1 - d / range;                 // 0 långt bort, 1 nära
+            const freq = 55 + c * 75;                // 55–130 Hz (mörkt och hårt)
+            playEnemy(freq, panFor(enemy.x), 0.12);
+            delay = 540 - c * 380;                   // 540 (långt) – 160 ms (nära)
+        }
+    }
+    setTimeout(enemyAudioLoop, delay);
+}
+
+function enemyMoveLoop(){
+    let delay = 600;
+    if(state === "play" && enemy.active && !frozen && !speaking && Date.now() > enemy.cooldown){
+        moveEnemy();
+        delay = curEnemyMs;
+    }
+    setTimeout(enemyMoveLoop, delay);
+}
+
+/* ---------- BANBYGGE ---------- */
+function reachable(from, to){
+    const seen = Array.from({length:rows}, () => new Array(cols).fill(false));
+    const q = [from];
+    seen[from.y][from.x] = true;
+    while(q.length){
+        const c = q.shift();
+        if(c.x === to.x && c.y === to.y) return true;
+        const nb = [[1,0],[-1,0],[0,1],[0,-1]];
+        for(const [dx,dy] of nb){
+            const nx = c.x + dx, ny = c.y + dy;
+            if(nx>=0 && ny>=0 && nx<cols && ny<rows && !seen[ny][nx] && !wall[ny][nx]){
+                seen[ny][nx] = true;
+                q.push({x:nx, y:ny});
+            }
+        }
+    }
+    return false;
+}
+
+function farthestCell(from){
+    let best = null, bestD = -1;
+    for(let y=0; y<rows; y++){
+        for(let x=0; x<cols; x++){
+            if(wall[y][x]) continue;
+            if(x === from.x && y === from.y) continue;
+            const d = Math.abs(x - from.x) + Math.abs(y - from.y);
+            if(d > bestD){ bestD = d; best = {x, y}; }
+        }
+    }
+    return best || { x:from.x, y:from.y };
+}
+
+function emptyWalls(){ return Array.from({length:rows}, () => new Array(cols).fill(false)); }
+
+function buildBoard(){
+    const cfg = DIFFS[difficulty];
+    cols = Math.min(cfg.maxSize, cfg.startSize + (round - 1) * cfg.grow);
+    rows = cols;
+
+    player.x = Math.floor(cols / 2);
+    player.y = Math.floor(rows / 2);
+
+    // skatt på slumpad ruta (inte spelaren)
+    do{
+        treasure.x = Math.floor(Math.random() * cols);
+        treasure.y = Math.floor(Math.random() * rows);
+    } while(treasure.x === player.x && treasure.y === player.y);
+
+    // väggar (om någon) – garantera att skatten går att nå
+    wall = emptyWalls();
+    if(cfg.wallPct > 0){
+        let ok = false;
+        for(let attempt = 0; attempt < 80 && !ok; attempt++){
+            wall = emptyWalls();
+            for(let y=0; y<rows; y++){
+                for(let x=0; x<cols; x++){
+                    if(x === player.x && y === player.y) continue;
+                    if(x === treasure.x && y === treasure.y) continue;
+                    if(Math.random() < cfg.wallPct) wall[y][x] = true;
+                }
+            }
+            ok = reachable(player, treasure);
+        }
+        if(!ok) wall = emptyWalls();   // fallback: hellre inga väggar än olösbart
+    }
+
+    // fiende
+    enemy.active = cfg.enemy;
+    enemy.cooldown = 0;
+    if(cfg.enemy){
+        const e = ENEMY_DIFFS[enemyLevel];
+        const spot = farthestCell(player);
+        enemy.x = spot.x; enemy.y = spot.y;
+        curEnemyMs   = Math.max(e.msMin, e.ms - (round - 1) * e.ramp);
+        enemyChase   = e.chase;
+        enemyRange   = e.range;
+        enemyRetreat = e.retreat;
+    }
+
+    steps = 0;
+    digs = 0;
+}
+
+/* ---------- FIENDENS RÖRELSE ---------- */
+function moveEnemy(){
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+    const cands = [];
+    for(const [dx,dy] of dirs){
+        const nx = enemy.x + dx, ny = enemy.y + dy;
+        if(nx>=0 && ny>=0 && nx<cols && ny<rows && !wall[ny][nx]) cands.push({x:nx, y:ny});
+    }
+    if(cands.length === 0) return;
+
+    let pick;
+    if(Math.random() < enemyChase){
+        // mot spelaren
+        pick = cands[0];
+        let bestD = Math.abs(pick.x - player.x) + Math.abs(pick.y - player.y);
+        for(const c of cands){
+            const d = Math.abs(c.x - player.x) + Math.abs(c.y - player.y);
+            if(d < bestD){ bestD = d; pick = c; }
+        }
+    } else {
+        pick = cands[Math.floor(Math.random() * cands.length)];
+    }
+    enemy.x = pick.x; enemy.y = pick.y;
+
+    if(enemy.x === player.x && enemy.y === player.y) caught();
+}
+
+/* ---------- SPELHÄNDELSER ---------- */
+function setFeedback(text, color){
+    feedback = text;
+    feedbackColor = color;
+    feedbackUntil = Date.now() + 2400;
+}
+
+function caught(){
+    lives--;
+    playCaught();
+    if(lives <= 0){
+        state = "over";
+        setFeedback("💀 Fienden tog dig!", "red");
+        speak("Fienden tog dig. Spelet slut. Tryck mellanslag för att försöka igen, eller en pil för att byta svårighet.");
+    } else {
+        setFeedback("⚠️ Aj! Liv kvar: " + lives, "#ff8a3a");
+        speak("Aj! Fienden tog dig. Du har " + lives + " liv kvar.");
+        const spot = farthestCell(player);   // fienden drar sig undan
+        enemy.x = spot.x; enemy.y = spot.y;
+        enemy.cooldown = Date.now() + enemyRetreat;   // andrum (beror på fiendenivå)
+    }
+}
+
+function move(dx, dy){
+    if(state !== "play") return;
+    const nx = player.x + dx;
+    const ny = player.y + dy;
+    if(nx < 0 || ny < 0 || nx >= cols || ny >= rows){ playBell(); return; }
+    if(wall[ny][nx]){ playBell(); return; }
+    player.x = nx;
+    player.y = ny;
+    steps++;
+    if(enemy.active && enemy.x === player.x && enemy.y === player.y) caught();
+}
+
+function dig(){
+    if(state !== "play") return;
+    digs++;
+    if(player.x === treasure.x && player.y === treasure.y){
+        state = "won";
+        setFeedback("🏆 Skatten hittad!", "gold");
+        playFound();
+        speak("Hittat! Tryck mellanslag för nästa runda, eller en pil för att byta svårighet.");
+    } else {
+        setFeedback("⛏️ Inget här…", "#ffcf5a");
+        playMiss();
+    }
+}
+
+function orientPing(){
+    if(state !== "play" || !audioCtx) return;
+    playPing(pingFreq(), panFor(treasure.x), 0.16);
+}
+
+/* ---------- MENY OCH START ---------- */
+function speakMenu(){
+    speak("Sonarjakten. Välj svårighet med pilarna. Pil upp: Lätt, öppet fält. " +
+          "Pil höger: Mellan, med väggar som ringer som en klocka. " +
+          "Pil ner: Svår, väggar och en fiende – då får du välja hur svår fienden är. " +
+          "Tryck mellanslag för att börja.");
+}
+function speakEnemyMenu(){
+    speak("Svår, med fiende. Välj hur svår fienden ska vara. " +
+          "Pil upp: lätt fiende, långsam och snäll att träna mot. " +
+          "Pil höger: medel fiende. Pil ner: svår fiende. " +
+          "Tryck mellanslag för att börja.");
+}
+function chooseEnemy(key){
+    enemyLevel = key;
+    speak(ENEMY_DIFFS[key].name + " vald. Tryck mellanslag för att börja.");
+}
+function toMenu(){
+    state = "menu";
+    speakMenu();
+}
+function chooseDifficulty(key){
+    difficulty = key;
+    const cfg = DIFFS[key];
+    speak(cfg.name + " vald. Tryck mellanslag för att börja.");
+}
+
+function startGame(){
+    round = 1;
+    lives = 3;
+    buildBoard();
+    state = "play";
+    announceStart();
+}
+function nextRound(){
+    round++;
+    buildBoard();
+    state = "play";
+    announceStart();
+}
+function announceStart(){
+    if(!primed) return;
+    const cfg = DIFFS[difficulty];
+    let msg = cfg.name + ", runda " + round + ". ";
+    if(difficulty === "mellan") msg += "Går du in i en vägg ringer en klocka. ";
+    if(difficulty === "svar")   msg += "Väggar ringer som en klocka. Fienden är inställd på " +
+                                       ENEMY_DIFFS[enemyLevel].short + " och har ett hårt, mörkt ljud – håll dig undan. ";
+    msg += "Leta efter skatten.";
+    speakInstruction(msg);
+}
+
+/* ---------- HELSKÄRM ---------- */
+function toggleFullscreen(){
+    if(!document.fullscreenElement){
+        if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
+    } else {
+        if(document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+    }
+    fsBtn.blur();
+}
+fsBtn.addEventListener("click", toggleFullscreen);
+document.addEventListener("fullscreenchange", ()=>{
+    fsBtn.textContent = document.fullscreenElement ? "🖥️ Avsluta helskärm" : "🖥️ Helskärm";
+});
+
+/* ---------- LJUD PÅ/AV ---------- */
+function toggleVoice(){
+    voiceOn = !voiceOn;
+    voiceBtn.textContent = voiceOn ? "🔊 Ljud på" : "🔇 Ljud av";
+    if(!voiceOn){
+        if("speechSynthesis" in window) speechSynthesis.cancel();
+    } else {
+        primed = true;
+        ensureAudio();
+    }
+    voiceBtn.blur();
+}
+voiceBtn.addEventListener("click", toggleVoice);
+
+/* ---------- TANGENTER (endast lättfunna tangenter) ---------- */
+function classify(e){
+    const k = e.key, c = e.code;
+    if(k === "ArrowUp")    return "up";
+    if(k === "ArrowDown")  return "down";
+    if(k === "ArrowLeft")  return "left";
+    if(k === "ArrowRight") return "right";
+    if(k === " " || c === "Space") return "space";
+    if(k === "Enter" || c === "NumpadEnter") return "again";
+    if(k === "Control")    return "again";
+    if(k === "Insert" || c === "Insert" || c === "Numpad0") return "again";
+    if(k === "m" || k === "M") return "mute";
+    return null;
+}
+
+document.addEventListener("keydown",(e)=>{
+    if(e.repeat) return;
+    const a = classify(e);
+    if(!a) return;
+
+    if(a === "mute"){ toggleVoice(); return; }
+
+    // Första trycket väcker ljudet och läser upp menyn.
+    if(!primed){
+        primed = true;
+        ensureAudio();
+        e.preventDefault();
+        speakMenu();
+        return;
+    }
+
+    e.preventDefault();
+
+    if(state === "menu"){
+        if(a === "up")        chooseDifficulty("latt");
+        else if(a === "right")chooseDifficulty("mellan");
+        else if(a === "down"){ difficulty = "svar"; state = "enemymenu"; speakEnemyMenu(); }
+        else if(a === "left") speakMenu();
+        else if(a === "space")startGame();
+        return;
+    }
+
+    if(state === "enemymenu"){
+        if(a === "up")        chooseEnemy("latt");
+        else if(a === "right")chooseEnemy("medel");
+        else if(a === "down") chooseEnemy("svar");
+        else if(a === "left" || a === "again") speakEnemyMenu();
+        else if(a === "space")startGame();
+        return;
+    }
+
+    if(state === "won"){
+        if(a === "space" || a === "again") nextRound();
+        else if(a === "up" || a === "down" || a === "left" || a === "right") toMenu();
+        return;
+    }
+
+    if(state === "over"){
+        if(a === "space" || a === "again") startGame();
+        else if(a === "up" || a === "down" || a === "left" || a === "right") toMenu();
+        return;
+    }
+
+    // state === "play"
+    if(a === "space")      dig();
+    else if(a === "again") orientPing();
+    else if(a === "up")    move(0, -1);
+    else if(a === "down")  move(0, 1);
+    else if(a === "left")  move(-1, 0);
+    else if(a === "right") move(1, 0);
+});
+
+/* ---------- RITNING (för seende medhjälpare) ---------- */
+function draw(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const tile = canvas.width / cols;
+
+    if(state === "menu"){
+        ctx.textAlign = "center";
+        ctx.fillStyle = "gold";
+        ctx.font = "22px Arial";
+        ctx.fillText("Välj svårighet", canvas.width/2, 70);
+        ctx.fillStyle = "white";
+        ctx.font = "17px Arial";
+        ctx.fillText("⬆️  Lätt – öppet fält", canvas.width/2, 150);
+        ctx.fillText("➡️  Mellan – väggar", canvas.width/2, 195);
+        ctx.fillText("⬇️  Svår – väggar + fiende (välj fiendenivå)", canvas.width/2, 240);
+        ctx.fillStyle = "#9fd";
+        ctx.fillText("Vald: " + DIFFS[difficulty].name, canvas.width/2, 310);
+        ctx.fillStyle = "#bbb";
+        ctx.font = "15px Arial";
+        ctx.fillText("Mellanslag = börja", canvas.width/2, 350);
+        ctx.textAlign = "left";
+        updateHud();
+        return;
+    }
+
+    if(state === "enemymenu"){
+        ctx.textAlign = "center";
+        ctx.fillStyle = "gold";
+        ctx.font = "22px Arial";
+        ctx.fillText("Hur svår ska fienden vara?", canvas.width/2, 70);
+        ctx.fillStyle = "white";
+        ctx.font = "17px Arial";
+        ctx.fillText("⬆️  Lätt fiende – långsam (träna)", canvas.width/2, 150);
+        ctx.fillText("➡️  Medel fiende", canvas.width/2, 195);
+        ctx.fillText("⬇️  Svår fiende", canvas.width/2, 240);
+        ctx.fillStyle = "#9fd";
+        ctx.fillText("Vald: " + ENEMY_DIFFS[enemyLevel].name, canvas.width/2, 310);
+        ctx.fillStyle = "#bbb";
+        ctx.font = "15px Arial";
+        ctx.fillText("Mellanslag = börja  ·  ⬅️ = hör igen", canvas.width/2, 350);
+        ctx.textAlign = "left";
+        updateHud();
+        return;
+    }
+
+    // rutnät
+    ctx.strokeStyle = "#1f1f1f";
+    ctx.lineWidth = 1;
+    for(let i = 0; i <= cols; i++){
+        ctx.beginPath(); ctx.moveTo(i*tile, 0); ctx.lineTo(i*tile, canvas.height); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i*tile); ctx.lineTo(canvas.width, i*tile); ctx.stroke();
+    }
+
+    // väggar
+    ctx.fillStyle = "#555";
+    for(let y=0; y<rows; y++){
+        for(let x=0; x<cols; x++){
+            if(wall[y][x]) ctx.fillRect(x*tile+1, y*tile+1, tile-2, tile-2);
+        }
+    }
+
+    // skatt (svag, ljus när vunnen)
+    ctx.fillStyle = (state === "won") ? "gold" : "rgba(255,215,0,0.18)";
+    ctx.fillRect(treasure.x*tile+3, treasure.y*tile+3, tile-6, tile-6);
+
+    // fiende
+    if(enemy.active){
+        ctx.fillStyle = (Date.now() > enemy.cooldown) ? "rgba(255,70,70,0.9)" : "rgba(255,70,70,0.35)";
+        ctx.beginPath();
+        ctx.arc(enemy.x*tile + tile/2, enemy.y*tile + tile/2, tile/2 - 4, 0, Math.PI*2);
+        ctx.fill();
+    }
+
+    // spelaren
+    ctx.fillStyle = "orange";
+    ctx.beginPath();
+    ctx.arc(player.x*tile + tile/2, player.y*tile + tile/2, tile/2 - 4, 0, Math.PI*2);
+    ctx.fill();
+
+    if(state === "won" || state === "over"){
+        ctx.fillStyle = "rgba(0,0,0,0.82)";
+        ctx.fillRect(0, canvas.height/2 - 52, canvas.width, 104);
+        ctx.textAlign = "center";
+        ctx.fillStyle = (state === "won") ? "gold" : "red";
+        ctx.font = "26px Arial";
+        ctx.fillText(state === "won" ? "🏆 Skatten hittad!" : "💀 Fienden tog dig!", canvas.width/2, canvas.height/2 - 8);
+        ctx.fillStyle = "white";
+        ctx.font = "15px Arial";
+        ctx.fillText(state === "won" ? "Mellanslag = nästa runda  •  pil = byt nivå"
+                                     : "Mellanslag = försök igen  •  pil = byt nivå",
+                     canvas.width/2, canvas.height/2 + 22);
+        ctx.textAlign = "left";
+    }
+
+    updateHud();
+}
+
+function updateHud(){
+    diffEl.textContent = DIFFS[difficulty]
+        ? (DIFFS[difficulty].name + (difficulty === "svar" ? " (" + ENEMY_DIFFS[enemyLevel].short + " fiende)" : ""))
+        : "–";
+    roundEl.textContent = round;
+    livesEl.textContent = lives;
+    stepsEl.textContent = steps;
+    digsEl.textContent = digs;
+    feedbackEl.textContent = feedback;
+    feedbackEl.style.color = feedbackColor;
+}
+
+function gameLoop(){
+    if(feedback && Date.now() > feedbackUntil && state === "play") feedback = "";
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+buildBoard();          // förbered en bana i bakgrunden
+state = "menu";
+pingLoop();
+enemyAudioLoop();
+enemyMoveLoop();
+gameLoop();
+
+</script>
+</body>
+</html>
