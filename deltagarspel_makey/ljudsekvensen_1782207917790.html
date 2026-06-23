@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ljudsekvensen</title>
+
+<style>
+html, body{ height:100%; margin:0; }
+
+body{
+    background:black;
+    color:white;
+    font-family:Arial;
+    text-align:center;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    height:100vh;
+    overflow:hidden;
+}
+
+#topbar{ position:fixed; top:8px; right:10px; z-index:20; }
+
+#fsBtn, #voiceBtn, #replayBtn{
+    font-size:14px;
+    padding:6px 12px;
+    cursor:pointer;
+    border-radius:6px;
+    border:1px solid #888;
+    background:#333;
+    color:white;
+    margin-left:6px;
+}
+
+h1{ color:gold; margin:8px 0 2px; font-size:clamp(20px, 4vh, 34px); }
+
+#info{ font-size:clamp(11px, 1.7vh, 15px); margin:2px 0 6px; color:#ddd; line-height:1.5; }
+
+#hud{ font-size:clamp(13px, 2vh, 18px); margin-bottom:6px; }
+
+#feedback{
+    min-height:28px;
+    font-size:clamp(15px, 2.4vh, 22px);
+    font-weight:bold;
+    margin:4px 0;
+}
+
+canvas{
+    background:black;
+    border:2px solid white;
+    display:block;
+    width:min(60vh, 92vw);
+    height:min(60vh, 92vw);
+}
+
+#hint{ font-size:clamp(10px,1.5vh,13px); color:#888; margin-top:6px; }
+</style>
+</head>
+
+<body>
+
+<div id="topbar">
+    <button id="replayBtn">🔁 Hör igen</button>
+    <button id="voiceBtn">🔊 Ljud på</button>
+    <button id="fsBtn">🖥️ Helskärm</button>
+</div>
+
+<h1>🎵 Ljudsekvensen</h1>
+
+<div id="info">
+Lyssna på tonerna och upprepa dem med pilknapparna &nbsp;•&nbsp; ␣ Mellanslag = börja / nytt spel<br>
+🔁 Enter (eller Ctrl / Insert) = hör sekvensen igen
+</div>
+
+<div id="hud">
+    🎚️ Sekvens: <span id="lenEl">0</span> toner
+    &nbsp;|&nbsp; ❤️ Liv: <span id="livesEl">3</span>
+    &nbsp;|&nbsp; ⭐ Bästa: <span id="bestEl">0</span>
+</div>
+
+<canvas id="game" width="420" height="420"></canvas>
+
+<div id="feedback"></div>
+
+<div id="hint">Pilarnas toner: upp = högst, höger = näst högst, vänster = näst lägst, ner = lägst.</div>
+
+<script>
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const lenEl = document.getElementById("lenEl");
+const livesEl = document.getElementById("livesEl");
+const bestEl = document.getElementById("bestEl");
+const feedbackEl = document.getElementById("feedback");
+const fsBtn = document.getElementById("fsBtn");
+const voiceBtn = document.getElementById("voiceBtn");
+const replayBtn = document.getElementById("replayBtn");
+
+/* Riktningar: 0 = upp, 1 = ner, 2 = vänster, 3 = höger */
+const DIRS = ["upp", "ner", "vänster", "höger"];
+const FREQS = [698, 349, 466, 587];   // upp högst, ner lägst
+const PAD_COLORS = ["#3aa0ff", "#ff5a5a", "#ffcf5a", "#5ad17a"];
+
+let sequence = [];
+let inputIndex = 0;
+let state = "idle";        // idle | playing | input | over
+let lives = 3;
+let best = 0;
+
+let activePad = -1;        // vilken platta som "lyser" just nu (för seende)
+let activeUntil = 0;
+
+let feedback = "";
+let feedbackColor = "white";
+let feedbackUntil = 0;
+
+/* ---------- RÖST / LJUD ---------- */
+let voiceOn = true;
+let primed = false;
+let svVoice = null;
+let audioCtx = null;
+
+function pickVoice(){
+    if(!("speechSynthesis" in window)) return;
+    const vs = speechSynthesis.getVoices();
+    svVoice = vs.find(v => v.lang && v.lang.toLowerCase().startsWith("sv")) || null;
+}
+if("speechSynthesis" in window){
+    pickVoice();
+    speechSynthesis.onvoiceschanged = pickVoice;
+}
+
+function speakRaw(text, cancel){
+    if(!voiceOn || !("speechSynthesis" in window) || !text) return;
+    try{
+        if(cancel) speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "sv-SE";
+        if(svVoice) u.voice = svVoice;
+        u.rate = 0.98;
+        speechSynthesis.speak(u);
+    }catch(e){}
+}
+function speak(text){ speakRaw(text, true); }
+
+function ensureAudio(){
+    if(!audioCtx){
+        try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        catch(e){ audioCtx = null; }
+    }
+    if(audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+}
+
+function playTone(dir, dur){
+    if(audioCtx && voiceOn){
+        const t = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = FREQS[dir];
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + dur + 0.02);
+    }
+    activePad = dir;
+    activeUntil = Date.now() + dur * 1000;
+}
+
+/* ---------- SPELFLÖDE ---------- */
+function setFeedback(text, color){
+    feedback = text;
+    feedbackColor = color;
+    feedbackUntil = Date.now() + 2400;
+}
+
+function newGame(){
+    sequence = [];
+    lives = 3;
+    best = 0;
+    state = "idle";
+    addToSequence();
+}
+
+function addToSequence(){
+    sequence.push(Math.floor(Math.random() * 4));
+}
+
+/* Spelar upp hela sekvensen och lämnar sedan över till spelaren. */
+function playSequence(){
+    state = "playing";
+    speak("Lyssna. " + sequence.length + (sequence.length === 1 ? " ton." : " toner."));
+    let i = 0;
+    const step = () => {
+        if(i >= sequence.length){
+            setTimeout(() => {
+                state = "input";
+                inputIndex = 0;
+                speak("Din tur.");
+            }, 350);
+            return;
+        }
+        playTone(sequence[i], 0.40);
+        i++;
+        setTimeout(step, 560);
+    };
+    // liten paus så att "Lyssna" hinner sägas först
+    setTimeout(step, 1100);
+}
+
+function replaySequence(){
+    if(state !== "input" && state !== "playing") return;
+    playSequence();
+}
+
+function handleInput(dir){
+    if(state !== "input") return;
+    playTone(dir, 0.30);
+
+    if(dir === sequence[inputIndex]){
+        inputIndex++;
+        if(inputIndex >= sequence.length){
+            best = Math.max(best, sequence.length);
+            setFeedback("✅ Rätt! Sekvens: " + sequence.length, "lime");
+            speak("Rätt!");
+            addToSequence();
+            state = "playing";
+            setTimeout(playSequence, 1100);
+        }
+    } else {
+        lives--;
+        if(lives <= 0){
+            state = "over";
+            setFeedback("💀 Fel ton – spelet slut", "red");
+            speak("Fel ton. Spelet slut. Du klarade " + best +
+                  (best === 1 ? " ton." : " toner.") +
+                  " Tryck mellanslag för nytt spel.");
+        } else {
+            setFeedback("❌ Fel ton! Liv kvar: " + lives, "red");
+            speak("Fel ton. Du har " + lives + " liv kvar. Lyssna igen.");
+            state = "playing";
+            setTimeout(playSequence, 1300);
+        }
+    }
+}
+
+/* ---------- HELSKÄRM ---------- */
+function toggleFullscreen(){
+    if(!document.fullscreenElement){
+        if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
+    } else {
+        if(document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+    }
+    fsBtn.blur();
+}
+fsBtn.addEventListener("click", toggleFullscreen);
+document.addEventListener("fullscreenchange", ()=>{
+    fsBtn.textContent = document.fullscreenElement ? "🖥️ Avsluta helskärm" : "🖥️ Helskärm";
+});
+
+/* ---------- LJUD PÅ/AV ---------- */
+function toggleVoice(){
+    voiceOn = !voiceOn;
+    voiceBtn.textContent = voiceOn ? "🔊 Ljud på" : "🔇 Ljud av";
+    if(!voiceOn){
+        if("speechSynthesis" in window) speechSynthesis.cancel();
+    } else {
+        primed = true;
+        ensureAudio();
+    }
+    voiceBtn.blur();
+}
+voiceBtn.addEventListener("click", toggleVoice);
+
+replayBtn.addEventListener("click", ()=>{ replayBtn.blur(); replaySequence(); });
+
+/* ---------- TANGENTER ---------- */
+/* ---------- TANGENTER (endast lättfunna tangenter) ---------- */
+/* Pilar = svara • Mellanslag = börja / nytt spel • Enter/Ctrl/Insert = hör igen */
+function classify(e){
+    const k = e.key, c = e.code;
+    if(k === "ArrowUp")    return "up";
+    if(k === "ArrowDown")  return "down";
+    if(k === "ArrowLeft")  return "left";
+    if(k === "ArrowRight") return "right";
+    if(k === " " || c === "Space") return "space";
+    if(k === "Enter" || c === "NumpadEnter") return "again";
+    if(k === "Control")    return "again";   // Ctrl till vänster om pilarna
+    if(k === "Insert" || c === "Insert" || c === "Numpad0") return "again";  // Insert till höger
+    if(k === "m" || k === "M") return "mute";  // för seende medhjälpare
+    return null;
+}
+
+document.addEventListener("keydown",(e)=>{
+    if(e.repeat) return;
+    const a = classify(e);
+    if(!a) return;
+
+    if(a === "mute"){ toggleVoice(); return; }
+
+    // Första trycket väcker ljudet och förklarar spelet.
+    if(!primed){
+        primed = true;
+        ensureAudio();
+        e.preventDefault();
+        speak("Ljudsekvensen. Lyssna på tonerna och upprepa dem med pilknapparna. " +
+              "Pil upp, ner, vänster och höger har varsin ton. " +
+              "Tryck mellanslag för att börja. Tryck Enter för att höra sekvensen igen.");
+        return;
+    }
+
+    e.preventDefault();
+
+    if(a === "again"){ replaySequence(); return; }
+
+    if(state === "idle"){
+        if(a === "space") playSequence();
+        return;
+    }
+    if(state === "over"){
+        if(a === "space"){ newGame(); playSequence(); }
+        return;
+    }
+    if(state === "playing") return;   // input ignoreras medan sekvensen spelas
+
+    // state === "input": pilar = svar
+    if(a === "up")    handleInput(0);
+    else if(a === "down")  handleInput(1);
+    else if(a === "left")  handleInput(2);
+    else if(a === "right") handleInput(3);
+});
+
+/* ---------- RITNING (för seende medhjälpare) ---------- */
+function padRects(){
+    const w = canvas.width, h = canvas.height;
+    const s = w * 0.26;                 // platt-storlek
+    const cx = w/2 - s/2, cy = h/2 - s/2;
+    const gap = s * 1.05;
+    return [
+        { dir:0, x:cx,        y:cy - gap }, // upp
+        { dir:1, x:cx,        y:cy + gap }, // ner
+        { dir:2, x:cx - gap,  y:cy },       // vänster
+        { dir:3, x:cx + gap,  y:cy }        // höger
+    ].map(p => ({ ...p, s }));
+}
+
+function draw(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const lit = (Date.now() < activeUntil) ? activePad : -1;
+
+    for(const p of padRects()){
+        const on = (p.dir === lit);
+        ctx.fillStyle = on ? PAD_COLORS[p.dir] : "#2a2a2a";
+        ctx.strokeStyle = PAD_COLORS[p.dir];
+        ctx.lineWidth = 2;
+        ctx.fillRect(p.x, p.y, p.s, p.s);
+        ctx.strokeRect(p.x, p.y, p.s, p.s);
+        ctx.fillStyle = on ? "black" : "#bbb";
+        ctx.font = "16px Arial";
+        ctx.textAlign = "center";
+        const label = ["⬆️","⬇️","⬅️","➡️"][p.dir];
+        ctx.fillText(label, p.x + p.s/2, p.y + p.s/2 + 6);
+    }
+    ctx.textAlign = "left";
+
+    if(state === "over"){
+        ctx.fillStyle = "rgba(0,0,0,0.82)";
+        ctx.fillRect(0, canvas.height/2 - 46, canvas.width, 92);
+        ctx.textAlign = "center";
+        ctx.fillStyle = "red";
+        ctx.font = "26px Arial";
+        ctx.fillText("💀 Spelet slut", canvas.width/2, canvas.height/2 - 4);
+        ctx.fillStyle = "white";
+        ctx.font = "15px Arial";
+        ctx.fillText("Tryck mellanslag för nytt spel", canvas.width/2, canvas.height/2 + 24);
+        ctx.textAlign = "left";
+    }
+
+    lenEl.textContent = sequence.length;
+    livesEl.textContent = lives;
+    bestEl.textContent = best;
+    feedbackEl.textContent = feedback;
+    feedbackEl.style.color = feedbackColor;
+}
+
+function gameLoop(){
+    if(feedback && Date.now() > feedbackUntil && state !== "over") feedback = "";
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+newGame();
+gameLoop();
+
+</script>
+</body>
+</html>
