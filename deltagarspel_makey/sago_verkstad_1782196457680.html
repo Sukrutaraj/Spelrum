@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sago-verkstad</title>
+<style>
+:root{ --bg:#0e0e10; --card:#1a1a1e; --line:#3a3a42; --green:#5ad17a; --gold:gold; }
+*{ box-sizing:border-box; }
+body{
+    background:var(--bg); color:#f0f0f0; font-family:Arial, sans-serif;
+    margin:0; padding:0 0 60px;
+}
+header{ text-align:center; padding:16px 12px 6px; }
+h1{ color:var(--gold); margin:6px 0; font-size:clamp(22px,3.4vw,32px); }
+.sub{ color:#cfcfcf; font-size:14px; max-width:760px; margin:0 auto; line-height:1.5; }
+
+.wrap{ max-width:860px; margin:0 auto; padding:0 14px; }
+
+.toolbar{
+    display:flex; flex-wrap:wrap; gap:8px; justify-content:center;
+    margin:14px 0; position:sticky; top:0; background:var(--bg);
+    padding:10px 0; z-index:5; border-bottom:1px solid var(--line);
+}
+button{
+    font-size:14px; padding:8px 12px; border-radius:8px; cursor:pointer;
+    border:1px solid #888; background:#2c2c33; color:white;
+}
+button:hover{ background:#3a3a44; }
+button.primary{ border-color:var(--green); background:#1d3a28; }
+button.gold{ border-color:var(--gold); background:#3a3320; }
+button.danger{ border-color:#c66; background:#3a2222; }
+
+.row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0; }
+label.fld{ font-size:13px; color:#bbb; display:block; margin-bottom:3px; }
+input[type=text], textarea, select{
+    background:#101014; color:#f0f0f0; border:1px solid var(--line);
+    border-radius:7px; padding:8px 10px; font-size:15px; font-family:inherit;
+}
+input[type=text]{ width:100%; }
+textarea{ width:100%; min-height:74px; resize:vertical; line-height:1.5; }
+select{ min-width:120px; }
+
+.scene{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:14px 16px; margin:14px 0;
+}
+.scene.start{ border-color:var(--gold); }
+.scene.ending{ border-color:#7aa0ff; }
+.scene h3{ margin:0 0 8px; font-size:16px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.badge{ font-size:11px; padding:2px 8px; border-radius:20px; background:#333; color:#ddd; }
+.badge.start{ background:#3a3320; color:var(--gold); }
+.badge.ending{ background:#22305a; color:#acd; }
+
+.choice{
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+    background:#141418; border:1px solid #2b2b32; border-radius:8px;
+    padding:8px; margin:8px 0;
+}
+.choice .lab{ flex:1; min-width:160px; }
+.choice .small{ font-size:12px; color:#999; }
+
+.scene-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.scene-actions button{ font-size:13px; padding:6px 10px; }
+
+#report{ white-space:pre-wrap; font-size:14px; background:var(--card);
+    border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin:12px 0; line-height:1.5; }
+#report.ok{ border-color:var(--green); }
+#report.warn{ border-color:#d9a441; }
+.hidden{ display:none; }
+.note{ font-size:12px; color:#999; margin-top:4px; }
+.story-name{ max-width:420px; margin:0 auto; }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>🧰 Sago-verkstad</h1>
+    <p class="sub">Skriv egna äventyr tillsammans – inga koder behövs. Skapa scener, lägg till vägval, lyssna och provspela. När ni är nöjda: tryck <b>Skapa färdigt spel</b> så får ni en spelfil att ge vidare.</p>
+</header>
+
+<div class="wrap">
+
+    <div class="story-name">
+        <label class="fld" for="storyName">Sagans namn</label>
+        <input type="text" id="storyName" placeholder="t.ex. Skatten i grottan">
+    </div>
+
+    <div class="toolbar">
+        <button class="primary" id="addSceneBtn">➕ Ny scen</button>
+        <button id="checkBtn">🔍 Kontrollera sagan</button>
+        <button class="gold" id="playtestBtn">🎮 Provspela</button>
+        <button class="gold" id="exportGameBtn">⬇️ Skapa färdigt spel (.html)</button>
+        <button id="exportJsonBtn">📤 Spara fil (.json)</button>
+        <button id="importJsonBtn">📥 Öppna fil (.json)</button>
+        <button id="exampleBtn">🆕 Ladda exempel</button>
+        <input type="file" id="fileInput" accept=".json,application/json" class="hidden">
+    </div>
+
+    <div class="row">
+        <div>
+            <label class="fld" for="startSelect">Sagan börjar med scenen:</label>
+            <select id="startSelect"></select>
+        </div>
+        <div id="saveState" class="note"></div>
+    </div>
+
+    <div id="report" class="hidden"></div>
+
+    <div id="scenes"></div>
+
+</div>
+
+<script>
+/* =====================================================================
+   SAGO-VERKSTAD
+   Datamodell:
+     story = {
+       name: "Sagans namn",
+       start: "<scen-id>",
+       scenes: {
+         "<scen-id>": { title:"Visningsnamn", text:"...", choices:[
+             { key:"up"|"down"|"left"|"right", label:"...", next:"<scen-id>" }
+         ]}
+       }
+     }
+   Varje scen har ett stabilt internt id, men visas med "title".
+   Vägval pekar på id via rullgardin – därför kan länkar aldrig bli felstavade.
+   ===================================================================== */
+
+const DIR_WORD  = { up:"Upp", down:"Ner", left:"Vänster", right:"Höger" };
+const DIR_ORDER = ["up","down","left","right"];
+const LS_KEY = "sagoverkstad_story";
+
+/* ---------- EXEMPELSAGA ---------- */
+function exampleStory(){
+    return {
+        name: "Skatten i grottan",
+        start: "intro",
+        scenes: {
+            intro: { title:"Början", text:"Det är tidig morgon. Du står vid kanten av en stor skog med en gammal skattkarta i handen. En stig leder in bland träden, och åt andra hållet hör du en porlande flod.",
+                choices:[ {key:"up",label:"följa stigen in i skogen",next:"skog"}, {key:"down",label:"gå mot floden",next:"flod"} ] },
+            skog: { title:"Skogen", text:"Inne i skogen är luften sval och full av fågelsång. Plötsligt ser du en rödbrun räv som sitter mitt på stigen och tittar nyfiket på dig.",
+                choices:[ {key:"up",label:"följa efter räven",next:"rav"}, {key:"down",label:"gå vidare på egen hand",next:"glanta"} ] },
+            rav: { title:"Räven", text:"Räven kuttrar glatt och springer före dig. Den stannar vid en mossig klippa, krafsar fram en liten järnnyckel ur jorden och lägger den framför dina fötter. Bakom klippan gapar en mörk grottöppning.",
+                choices:[ {key:"up",label:"ta nyckeln och gå in i grottan",next:"grotta_nyckel"}, {key:"down",label:"klappa räven först",next:"rav_tack"} ] },
+            rav_tack: { title:"Tacka räven", text:"Du klappar räven på huvudet och den blundar nöjt. Sedan tar du upp nyckeln och går mot grottan.",
+                choices:[ {key:"up",label:"gå in i grottan",next:"grotta_nyckel"} ] },
+            glanta: { title:"Gläntan", text:"Utan räven går du vilse en stund, men kommer ut i en solig glänta. Mitt i gräset glimmar något: en liten järnnyckel på en sten.",
+                choices:[ {key:"up",label:"ta nyckeln",next:"ta_nyckel"}, {key:"down",label:"lämna den och gå vidare",next:"lamna_nyckel"} ] },
+            ta_nyckel: { title:"Ta nyckeln", text:"Du stoppar nyckeln i fickan. Vid gläntans kant hittar du en stig som leder fram till en grottöppning i en kulle.",
+                choices:[ {key:"up",label:"gå in i grottan",next:"grotta_nyckel"} ] },
+            lamna_nyckel: { title:"Lämna nyckeln", text:"Du låter nyckeln ligga kvar och vandrar vidare tills du når en grottöppning i en kulle.",
+                choices:[ {key:"up",label:"gå in i grottan",next:"grotta_tom"} ] },
+            flod: { title:"Floden", text:"Vid floden ligger en liten roddbåt förtöjd. Vattnet glittrar, och en bit bort hör du bruset från en fors.",
+                choices:[ {key:"up",label:"ta båten nerför floden",next:"bat"}, {key:"down",label:"gå längs stranden till fots",next:"strand"} ] },
+            bat: { title:"Båten", text:"Du ror ut och strömmen tar fart. Forsen brusar allt högre och båten skakar. Du måste bestämma dig snabbt!",
+                choices:[ {key:"up",label:"ro hårt och rida på forsen",next:"grotta_tom"}, {key:"down",label:"styra in mot stranden",next:"strand"} ] },
+            strand: { title:"Stranden", text:"Du följer den leriga stranden tills den slutar vid en grottöppning precis vid vattnet.",
+                choices:[ {key:"up",label:"gå in i grottan",next:"grotta_tom"}, {key:"down",label:"vända om mot skogen",next:"tillbaka"} ] },
+            tillbaka: { title:"Vända om", text:"Du bestämmer dig för att utforska skogen i stället, och vänder om.",
+                choices:[ {key:"up",label:"gå in i skogen",next:"skog"} ] },
+            grotta_nyckel: { title:"Grottan (med nyckel)", text:"Inne i grottan lyser din ficklampa upp en gammal träkista. Den har ett rostigt lås – och du har ju en nyckel!",
+                choices:[ {key:"up",label:"låsa upp och öppna kistan",next:"slut_skatt"}, {key:"down",label:"låta kistan vara och gå ut",next:"slut_lamna"} ] },
+            grotta_tom: { title:"Grottan (utan nyckel)", text:"Inne i grottan står en gammal träkista. Den har ett rostigt lås, men du har ingen nyckel.",
+                choices:[ {key:"up",label:"försöka bryta upp låset",next:"slut_last"}, {key:"down",label:"gå ut och leta efter en nyckel",next:"leta_nyckel"} ] },
+            leta_nyckel: { title:"Leta nyckel", text:"Du inser att du behöver en nyckel, och vänder tillbaka mot skogen för att leta.",
+                choices:[ {key:"up",label:"gå tillbaka in i skogen",next:"skog"} ] },
+            slut_skatt: { title:"SLUT: Skatten", text:"Nyckeln passar! Locket glider upp och ett varmt, gyllene ljus strömmar ut. Kistan är full av guldmynt och ädelstenar. Du har hittat skatten!", choices:[] },
+            slut_lamna: { title:"SLUT: Lämna", text:"Du låter skatten vila där den ligger. På vägen ut känner du dig lätt om hjärtat – det finaste äventyret var kanske resan dit.", choices:[] },
+            slut_last: { title:"SLUT: Låset", text:"Hur du än sliter vill låset inte ge med sig, och till slut måste du lämna kistan. Men du har sett skogen, floden och en riktig grotta. Vilket äventyr ändå!", choices:[] }
+        }
+    };
+}
+
+/* ---------- TILLSTÅND ---------- */
+let story = null;
+let idCounter = 1;
+
+function load(){
+    try{
+        const raw = localStorage.getItem(LS_KEY);
+        if(raw){ story = JSON.parse(raw); return; }
+    }catch(e){}
+    story = exampleStory();
+}
+function save(){
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(story)); markSaved("Sparat i webbläsaren"); }
+    catch(e){ markSaved("Kunde inte spara i webbläsaren – använd Spara fil"); }
+}
+let saveTimer = null;
+function autosave(){ clearTimeout(saveTimer); saveTimer = setTimeout(save, 400); }
+function markSaved(t){ document.getElementById("saveState").textContent = "💾 " + t; }
+
+function newId(){
+    let id;
+    do{ id = "scen_" + (idCounter++); } while(story.scenes[id]);
+    return id;
+}
+function sceneIds(){ return Object.keys(story.scenes); }
+function titleOf(id){ const s = story.scenes[id]; return s ? (s.title || id) : "(saknas)"; }
+
+/* ---------- RÖST (förhandslyssning) ---------- */
+let svVoice = null;
+function pickVoice(){
+    if(!("speechSynthesis" in window)) return;
+    const vs = speechSynthesis.getVoices();
+    svVoice = vs.find(v => v.lang && v.lang.toLowerCase().startsWith("sv")) || null;
+}
+if("speechSynthesis" in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function listen(id){
+    if(!("speechSynthesis" in window)) return;
+    const sc = story.scenes[id];
+    if(!sc) return;
+    let txt = sc.text + " ";
+    if(sc.choices && sc.choices.length){
+        for(const k of DIR_ORDER){
+            const c = sc.choices.find(ch => ch.key === k);
+            if(c) txt += "Tryck " + DIR_WORD[k].toLowerCase() + " för att " + c.label + ". ";
+        }
+    } else {
+        txt += " Slut.";
+    }
+    try{
+        speechSynthesis.cancel();
+        (txt.match(/[^.!?]+[.!?]*/g) || [txt]).forEach(p => {
+            const u = new SpeechSynthesisUtterance(p.trim());
+            u.lang = "sv-SE"; if(svVoice) u.voice = svVoice; u.rate = 0.97;
+            speechSynthesis.speak(u);
+        });
+    }catch(e){}
+}
+
+/* ---------- RENDERING ---------- */
+function render(){
+    document.getElementById("storyName").value = story.name || "";
+    renderStartSelect();
+    renderScenes();
+}
+
+function renderStartSelect(){
+    const sel = document.getElementById("startSelect");
+    sel.innerHTML = "";
+    for(const id of sceneIds()){
+        const o = document.createElement("option");
+        o.value = id; o.textContent = titleOf(id);
+        if(id === story.start) o.selected = true;
+        sel.appendChild(o);
+    }
+}
+
+function targetOptions(selectedNext){
+    let html = '<option value="">— välj scen —</option>';
+    for(const id of sceneIds()){
+        const sel = (id === selectedNext) ? " selected" : "";
+        html += '<option value="' + id + '"' + sel + '>' + escapeHtml(titleOf(id)) + '</option>';
+    }
+    return html;
+}
+
+function renderScenes(){
+    const wrap = document.getElementById("scenes");
+    wrap.innerHTML = "";
+    for(const id of sceneIds()){
+        const sc = story.scenes[id];
+        const isEnding = !sc.choices || sc.choices.length === 0;
+        const isStart = id === story.start;
+
+        const div = document.createElement("div");
+        div.className = "scene" + (isStart ? " start" : "") + (isEnding ? " ending" : "");
+
+        let badges = "";
+        if(isStart) badges += '<span class="badge start">⭐ Startscen</span>';
+        if(isEnding) badges += '<span class="badge ending">🏁 Slut</span>';
+
+        let choicesHtml = "";
+        if(!isEnding){
+            (sc.choices || []).forEach((c, i) => {
+                let keyOpts = "";
+                for(const k of DIR_ORDER){
+                    keyOpts += '<option value="' + k + '"' + (c.key===k?" selected":"") + '>' + DIR_WORD[k] + '</option>';
+                }
+                choicesHtml +=
+                    '<div class="choice">' +
+                        '<select data-act="ckey" data-id="' + id + '" data-i="' + i + '">' + keyOpts + '</select>' +
+                        '<input class="lab" type="text" placeholder="vad man väljer, t.ex. gå in i grottan" value="' + escapeAttr(c.label) + '" data-act="clabel" data-id="' + id + '" data-i="' + i + '">' +
+                        '<span class="small">leder till</span>' +
+                        '<select data-act="cnext" data-id="' + id + '" data-i="' + i + '">' + targetOptions(c.next) + '</select>' +
+                        '<button data-act="cdel" data-id="' + id + '" data-i="' + i + '">🗑️</button>' +
+                    '</div>';
+            });
+            choicesHtml += '<button data-act="cadd" data-id="' + id + '">➕ Lägg till vägval</button>';
+        } else {
+            choicesHtml = '<div class="note">Det här är ett slut. Rösten säger texten och "Slut. Tryck mellanslag för att spela igen."</div>';
+        }
+
+        div.innerHTML =
+            '<h3>📜 <input type="text" value="' + escapeAttr(sc.title || "") + '" data-act="title" data-id="' + id + '" style="max-width:280px"> ' + badges + '</h3>' +
+            '<label class="fld">Det rösten läser upp:</label>' +
+            '<textarea data-act="text" data-id="' + id + '">' + escapeHtml(sc.text || "") + '</textarea>' +
+            '<div style="margin-top:10px">' + choicesHtml + '</div>' +
+            '<div class="scene-actions">' +
+                '<button data-act="listen" data-id="' + id + '">▶️ Lyssna</button>' +
+                '<button data-act="setstart" data-id="' + id + '">⭐ Gör till startscen</button>' +
+                '<button data-act="toggleend" data-id="' + id + '">' + (isEnding ? '↩️ Gör om till vägval' : '🏁 Gör till slut') + '</button>' +
+                '<button class="danger" data-act="delscene" data-id="' + id + '">🗑️ Ta bort scen</button>' +
+            '</div>';
+
+        wrap.appendChild(div);
+    }
+}
+
+function escapeHtml(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function escapeAttr(s){ return escapeHtml(s).replace(/"/g,"&quot;"); }
+
+/* ---------- HÄNDELSER ---------- */
+document.getElementById("scenes").addEventListener("input", (e)=>{
+    const t = e.target, act = t.getAttribute("data-act");
+    if(!act) return;
+    const id = t.getAttribute("data-id");
+    const i  = t.getAttribute("data-i");
+    if(act === "text"){ story.scenes[id].text = t.value; autosave(); }
+    else if(act === "title"){ story.scenes[id].title = t.value; refreshTitles(); autosave(); }
+    else if(act === "clabel"){ story.scenes[id].choices[i].label = t.value; autosave(); }
+});
+
+document.getElementById("scenes").addEventListener("change", (e)=>{
+    const t = e.target, act = t.getAttribute("data-act");
+    if(!act) return;
+    const id = t.getAttribute("data-id");
+    const i  = t.getAttribute("data-i");
+    if(act === "ckey"){ story.scenes[id].choices[i].key = t.value; autosave(); }
+    else if(act === "cnext"){ story.scenes[id].choices[i].next = t.value; autosave(); }
+});
+
+document.getElementById("scenes").addEventListener("click", (e)=>{
+    const t = e.target.closest("button");
+    if(!t) return;
+    const act = t.getAttribute("data-act");
+    const id = t.getAttribute("data-id");
+    const i  = t.getAttribute("data-i");
+    if(!act) return;
+
+    if(act === "listen"){ listen(id); return; }
+    if(act === "setstart"){ story.start = id; render(); autosave(); return; }
+    if(act === "delscene"){
+        if(sceneIds().length <= 1){ alert("Det måste finnas minst en scen."); return; }
+        if(!confirm('Ta bort scenen "' + titleOf(id) + '"?')) return;
+        delete story.scenes[id];
+        for(const sid of sceneIds()){
+            for(const c of (story.scenes[sid].choices || [])){
+                if(c.next === id) c.next = "";
+            }
+        }
+        if(story.start === id) story.start = sceneIds()[0];
+        render(); autosave(); return;
+    }
+    if(act === "toggleend"){
+        const sc = story.scenes[id];
+        if(sc.choices && sc.choices.length){ sc.choices = []; }
+        else { sc.choices = [ {key:"up",label:"",next:""} ]; }
+        render(); autosave(); return;
+    }
+    if(act === "cadd"){
+        const sc = story.scenes[id];
+        if(!sc.choices) sc.choices = [];
+        if(sc.choices.length >= 4){ alert("En scen kan ha högst fyra vägval (en per pil)."); return; }
+        const used = sc.choices.map(c=>c.key);
+        const free = DIR_ORDER.find(k => !used.includes(k)) || "up";
+        sc.choices.push({ key:free, label:"", next:"" });
+        render(); autosave(); return;
+    }
+    if(act === "cdel"){
+        story.scenes[id].choices.splice(Number(i), 1);
+        render(); autosave(); return;
+    }
+});
+
+function refreshTitles(){
+    // uppdatera namn i rullgardiner utan att tappa fokus i textfält
+    renderStartSelect();
+    document.querySelectorAll('select[data-act="cnext"]').forEach(sel => {
+        const cur = sel.value;
+        sel.innerHTML = targetOptions(cur);
+    });
+}
+
+document.getElementById("storyName").addEventListener("input", (e)=>{ story.name = e.target.value; autosave(); });
+document.getElementById("startSelect").addEventListener("change", (e)=>{ story.start = e.target.value; render(); autosave(); });
+
+document.getElementById("addSceneBtn").addEventListener("click", ()=>{
+    const id = newId();
+    story.scenes[id] = { title:"Ny scen", text:"", choices:[ {key:"up",label:"",next:""} ] };
+    render(); autosave();
+    window.scrollTo(0, document.body.scrollHeight);
+});
+
+document.getElementById("exampleBtn").addEventListener("click", ()=>{
+    if(!confirm("Ladda exempelsagan? Det ersätter det du har nu (spara först om du vill behålla det).")) return;
+    story = exampleStory(); render(); autosave();
+});
+
+document.getElementById("checkBtn").addEventListener("click", ()=>{ showReport(validate()); });
+
+/* ---------- VALIDERING ---------- */
+function validate(){
+    const ids = sceneIds();
+    const issues = [];
+    if(!story.scenes[story.start]) issues.push('• Startscenen är inte vald eller saknas.');
+
+    for(const id of ids){
+        const sc = story.scenes[id];
+        if(!sc.text || !sc.text.trim()) issues.push('• Scenen "' + titleOf(id) + '" saknar text.');
+        const keys = [];
+        for(const c of (sc.choices || [])){
+            if(!c.label || !c.label.trim()) issues.push('• Ett vägval i "' + titleOf(id) + '" saknar text.');
+            if(!c.next) issues.push('• Ett vägval i "' + titleOf(id) + '" leder ingenstans (välj scen).');
+            else if(!story.scenes[c.next]) issues.push('• Ett vägval i "' + titleOf(id) + '" pekar på en scen som tagits bort.');
+            if(keys.includes(c.key)) issues.push('• "' + titleOf(id) + '" använder samma pil (' + DIR_WORD[c.key] + ') två gånger.');
+            keys.push(c.key);
+        }
+    }
+    // nåbarhet
+    const seen = new Set([story.start]);
+    const q = [story.start];
+    while(q.length){
+        const sc = story.scenes[q.shift()];
+        if(!sc) break;
+        for(const c of (sc.choices || [])){
+            if(story.scenes[c.next] && !seen.has(c.next)){ seen.add(c.next); q.push(c.next); }
+        }
+    }
+    const unreachable = ids.filter(id => !seen.has(id));
+    if(unreachable.length) issues.push('• Dessa scener går inte att nå från början: ' + unreachable.map(titleOf).join(", "));
+
+    const endings = ids.filter(id => !story.scenes[id].choices || story.scenes[id].choices.length === 0);
+    if(endings.length === 0) issues.push('• Sagan har inget slut (gör minst en scen till ett slut).');
+
+    return { issues, endings: endings.length, scenes: ids.length };
+}
+function showReport(r){
+    const el = document.getElementById("report");
+    el.classList.remove("hidden");
+    if(r.issues.length === 0){
+        el.className = "ok";
+        el.textContent = "✅ Allt ser bra ut!\n" + r.scenes + " scener, " + r.endings + " slut. Sagan hänger ihop och går att spela.";
+    } else {
+        el.className = "warn";
+        el.textContent = "⚠️ Saker att fixa:\n" + r.issues.join("\n");
+    }
+    el.scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+
+/* ---------- IMPORT / EXPORT ---------- */
+function download(filename, text, mime){
+    const blob = new Blob([text], { type: mime || "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
+function safeName(){ return (story.name || "aventyret").replace(/[^a-zA-Z0-9åäöÅÄÖ _-]/g,"").trim().replace(/\s+/g,"_") || "aventyret"; }
+
+document.getElementById("exportJsonBtn").addEventListener("click", ()=>{
+    download(safeName() + ".json", JSON.stringify(story, null, 2), "application/json");
+});
+document.getElementById("importJsonBtn").addEventListener("click", ()=> document.getElementById("fileInput").click());
+document.getElementById("fileInput").addEventListener("change", (e)=>{
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+        try{
+            const data = JSON.parse(r.result);
+            if(!data.scenes || typeof data.scenes !== "object") throw new Error("fel format");
+            story = data;
+            if(!story.start || !story.scenes[story.start]) story.start = Object.keys(story.scenes)[0];
+            render(); autosave();
+            alert("Sagan är inläst.");
+        }catch(err){ alert("Kunde inte läsa filen – är det en saga sparad härifrån?"); }
+    };
+    r.readAsText(f);
+    e.target.value = "";
+});
+
+document.getElementById("exportGameBtn").addEventListener("click", ()=>{
+    const r = validate();
+    if(r.issues.length){
+        if(!confirm("Sagan har saker att fixa (tryck Kontrollera för att se). Vill du skapa spelet ändå?")) { showReport(r); return; }
+    }
+    download(safeName() + ".html", buildGameHtml(), "text/html");
+});
+
+document.getElementById("playtestBtn").addEventListener("click", ()=>{
+    const html = buildGameHtml();
+    const blob = new Blob([html], { type:"text/html" });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank");
+    if(!w){ alert("Webbläsaren blockerade nytt fönster. Tryck 'Skapa färdigt spel' och öppna filen i stället."); }
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+});
+
+/* ---------- BYGG SPELFILEN ---------- */
+function buildGameHtml(){
+    const clean = { name: story.name || "Äventyret", start: story.start, scenes: story.scenes };
+    return PLAYER_TEMPLATE.replace("__STORY_JSON__", JSON.stringify(clean, null, 2));
+}
+
+/* Spelmotorn (samma tillgängliga motor som Äventyret). __STORY_JSON__ byts ut. */
+const PLAYER_TEMPLATE = [
+'<!DOCTYPE html>',
+'<html lang="sv"><head><meta charset="UTF-8">',
+'<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+'<title>Äventyret</title>',
+'<style>',
+'html,body{height:100%;margin:0}body{background:black;color:white;font-family:Arial;text-align:center;display:flex;flex-direction:column;align-items:center;min-height:100vh}',
+'#topbar{position:fixed;top:8px;right:10px;z-index:20}#fsBtn,#voiceBtn,#repeatBtn{font-size:14px;padding:6px 12px;cursor:pointer;border-radius:6px;border:1px solid #888;background:#333;color:white;margin-left:6px}',
+'h1{color:gold;margin:10px 0 2px;font-size:clamp(20px,4vh,34px)}#info{font-size:clamp(11px,1.7vh,15px);margin:2px 0 10px;color:#ddd;line-height:1.5}',
+'#panel{background:#111;border:2px solid #444;border-radius:12px;max-width:760px;width:88vw;padding:24px 26px;margin:4px auto 10px;min-height:180px;text-align:left}',
+'#sceneText{font-size:clamp(17px,2.7vh,23px);line-height:1.55}#choices{margin-top:20px}.choice{font-size:clamp(15px,2.3vh,20px);margin:10px 0;color:#9fd}',
+'.choice .keycap{display:inline-block;min-width:34px;text-align:center;background:#2a2a2a;border:1px solid #5ad17a;border-radius:6px;padding:2px 8px;margin-right:10px;color:white}',
+'#feedback{min-height:26px;font-size:clamp(14px,2.2vh,19px);font-weight:bold;margin:2px 0 16px;color:gold}',
+'</style></head><body>',
+'<div id="topbar"><button id="repeatBtn">🔁 Hör igen</button><button id="voiceBtn">🔊 Ljud på</button><button id="fsBtn">🖥️ Helskärm</button></div>',
+'<h1 id="title">📖 Äventyret</h1>',
+'<div id="info">Pilar = välj väg &nbsp;•&nbsp; Enter (eller Ctrl / Insert) = hör igen &nbsp;•&nbsp; ␣ Mellanslag = börja / spela igen &nbsp;•&nbsp; M = ljud på/av</div>',
+'<div id="panel"><div id="sceneText">Tryck på valfri tangent för att börja.</div><div id="choices"></div></div>',
+'<div id="feedback"></div>',
+'<scr'+'ipt>',
+'const STORY = __STORY_JSON__;',
+'const DIR_WORD={up:"upp",down:"ner",left:"vänster",right:"höger"};',
+'const DIR_GLYPH={up:"⬆️",down:"⬇️",left:"⬅️",right:"➡️"};',
+'const ORDER=["up","down","left","right"];',
+'const sceneTextEl=document.getElementById("sceneText"),choicesEl=document.getElementById("choices"),feedbackEl=document.getElementById("feedback");',
+'const fsBtn=document.getElementById("fsBtn"),voiceBtn=document.getElementById("voiceBtn"),repeatBtn=document.getElementById("repeatBtn");',
+'if(STORY.name){document.title=STORY.name;document.getElementById("title").textContent="📖 "+STORY.name;}',
+'let state="title",currentId=STORY.start,voiceOn=true,primed=false,svVoice=null,speaking=false;',
+'function pickVoice(){if(!("speechSynthesis" in window))return;const vs=speechSynthesis.getVoices();svVoice=vs.find(v=>v.lang&&v.lang.toLowerCase().startsWith("sv"))||null;}',
+'if("speechSynthesis" in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}',
+'function speak(t){if(!voiceOn||!("speechSynthesis" in window)||!t)return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="sv-SE";if(svVoice)u.voice=svVoice;u.rate=0.97;u.onstart=()=>{speaking=true};u.onend=()=>{speaking=false};u.onerror=()=>{speaking=false};speechSynthesis.speak(u);}catch(e){speaking=false;}}',
+'function narrate(t){if(!voiceOn||!("speechSynthesis" in window)||!t)return;try{speechSynthesis.cancel();const parts=t.match(/[^.!?]+[.!?]*/g)||[t];parts.forEach((p,i)=>{const s=p.trim();if(!s)return;const u=new SpeechSynthesisUtterance(s);u.lang="sv-SE";if(svVoice)u.voice=svVoice;u.rate=0.97;if(i===0)u.onstart=()=>{speaking=true};if(i===parts.length-1){u.onend=()=>{speaking=false};u.onerror=()=>{speaking=false};}speechSynthesis.speak(u);});}catch(e){speaking=false;}}',
+'function scene(){return STORY.scenes[currentId];}',
+'function choicesText(sc){const parts=[];for(const k of ORDER){const c=sc.choices.find(ch=>ch.key===k);if(c)parts.push("Tryck "+DIR_WORD[k]+" för att "+c.label+".");}return parts.join(" ");}',
+'function render(){const sc=scene();if(state==="title"){sceneTextEl.textContent="Ett äventyr där du väljer vägen. Tryck mellanslag för att börja.";choicesEl.innerHTML="";return;}if(!sc){sceneTextEl.textContent="Oj – den här delen saknas. Tryck mellanslag för att börja om.";choicesEl.innerHTML="";return;}sceneTextEl.textContent=sc.text;choicesEl.innerHTML="";if(!sc.choices||sc.choices.length===0){const d=document.createElement("div");d.className="choice";d.textContent="🏁 Slut – tryck mellanslag för att spela igen.";choicesEl.appendChild(d);return;}for(const k of ORDER){const c=sc.choices.find(ch=>ch.key===k);if(!c)continue;const d=document.createElement("div");d.className="choice";d.innerHTML=\'<span class="keycap">\'+DIR_GLYPH[k]+\'</span>\'+c.label;choicesEl.appendChild(d);}}',
+'function speakScene(){const sc=scene();if(!sc){speak("Den här delen saknas. Tryck mellanslag för att börja om.");state="ending";render();return;}if(!sc.choices||sc.choices.length===0){state="ending";render();narrate(sc.text+" Slut. Tryck mellanslag för att spela igen.");}else{state="story";render();narrate(sc.text+" "+choicesText(sc));}}',
+'function startStory(){currentId=STORY.start;speakScene();}',
+'function choose(key){const sc=scene();if(!sc||!sc.choices)return;const c=sc.choices.find(ch=>ch.key===key);if(!c){speak("Det valet finns inte här. "+choicesText(sc));return;}if(!STORY.scenes[c.next]){speak("Den vägen är inte färdig än. "+choicesText(sc));return;}currentId=c.next;speakScene();}',
+'function repeat(){if(state==="title"){speak("Tryck mellanslag för att börja.");return;}const sc=scene();if(!sc)return;if(state==="ending")narrate(sc.text+" Slut. Tryck mellanslag för att spela igen.");else narrate(sc.text+" "+choicesText(sc));}',
+'function toggleFullscreen(){if(!document.fullscreenElement){if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(()=>{});}else{if(document.exitFullscreen)document.exitFullscreen().catch(()=>{});}fsBtn.blur();}',
+'fsBtn.addEventListener("click",toggleFullscreen);document.addEventListener("fullscreenchange",()=>{fsBtn.textContent=document.fullscreenElement?"🖥️ Avsluta helskärm":"🖥️ Helskärm";});',
+'function toggleVoice(){voiceOn=!voiceOn;voiceBtn.textContent=voiceOn?"🔊 Ljud på":"🔇 Ljud av";if(!voiceOn&&"speechSynthesis" in window)speechSynthesis.cancel();else primed=true;voiceBtn.blur();}',
+'voiceBtn.addEventListener("click",toggleVoice);repeatBtn.addEventListener("click",()=>{repeatBtn.blur();repeat();});',
+'function classify(e){const k=e.key,c=e.code;if(k==="ArrowUp")return"up";if(k==="ArrowDown")return"down";if(k==="ArrowLeft")return"left";if(k==="ArrowRight")return"right";if(k===" "||c==="Space")return"space";if(k==="Enter"||c==="NumpadEnter")return"again";if(k==="Control")return"again";if(k==="Insert"||c==="Insert"||c==="Numpad0")return"again";if(k==="m"||k==="M")return"mute";return null;}',
+'document.addEventListener("keydown",(e)=>{if(e.repeat)return;const a=classify(e);if(!a)return;if(a==="mute"){toggleVoice();return;}if(!primed){primed=true;e.preventDefault();speak("Äventyret. Lyssna på berättelsen och välj väg med pilarna. Tryck Enter för att höra igen. Tryck mellanslag för att börja.");return;}e.preventDefault();if(a==="again"){repeat();return;}if(state==="title"){if(a==="space")startStory();return;}if(state==="ending"){if(a==="space")startStory();return;}if(a==="space"){repeat();return;}if(a==="up"||a==="down"||a==="left"||a==="right")choose(a);});',
+'render();',
+'<\/scr'+'ipt></body></html>'
+].join("\n");
+
+/* ---------- START ---------- */
+load();
+render();
+markSaved("Redo");
+</script>
+</body>
+</html>
