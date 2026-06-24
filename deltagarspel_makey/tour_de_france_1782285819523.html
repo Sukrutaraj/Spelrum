@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tour de France - Mer utmaning</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #fcdd00;
+            text-shadow: 2px 2px 4px #000;
+            margin-bottom: 10px;
+        }
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 400px;
+            background: linear-gradient(to bottom, #87CEEB 60%, #b5e555 60%, #b5e555 75%, #555 75%);
+            overflow: hidden;
+            border: 4px solid #333;
+            border-radius: 8px;
+        }
+        #cyclist {
+            position: absolute;
+            bottom: 65px;
+            left: 100px;
+            font-size: 40px;
+            transition: transform 0.1s, bottom 0.05s;
+            z-index: 10;
+            transform: scaleX(-1);
+        }
+        #scenery-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+        .bottle, .pothole {
+            position: absolute;
+            font-size: 24px;
+            z-index: 5;
+        }
+        .pothole {
+            font-size: 28px;
+            z-index: 4;
+        }
+        .mountain {
+            position: absolute;
+            bottom: 100px;
+            width: 0;
+            height: 0;
+            border-left: 150px solid transparent;
+            border-right: 150px solid transparent;
+            border-bottom: 150px solid #888;
+            opacity: 0.5;
+        }
+        #ui {
+            width: 800px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            background: #333;
+            color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        .stat-box {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #fcdd00;
+        }
+        #controls-info {
+            margin-top: 15px;
+            text-align: center;
+            color: #555;
+            max-width: 600px;
+        }
+        #start-screen, #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+        }
+        button {
+            background-color: #fcdd00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        button:hover {
+            background-color: #e5c700;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Le Tour de France</h1>
+
+    <div id="game-container">
+        <div id="start-screen">
+            <h2>Etape 1: Intensivt fält (Hål & Flaskor)</h2>
+            <p>Trampa intensivt! Styr upp/ner (↑/↓) för att fånga flaskor och väja för potthål.</p>
+            <button onclick="startGame()">Starta loppet</button>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <h2 id="end-title">I mål!</h2>
+            <p id="end-stats"></p>
+            <button onclick="resetGame()">Kör igen</button>
+        </div>
+
+        <div id="scenery-container"></div>
+        <div id="cyclist">🚴</div>
+    </div>
+
+    <!-- UI / Instrumentbräda -->
+    <div id="ui">
+        <div class="stat-box">
+            <div>Distans kvar</div>
+            <div id="ui-distance" class="stat-value">5000 m</div>
+        </div>
+        <div class="stat-box">
+            <div>Hastighet</div>
+            <div id="ui-speed" class="stat-value">0 km/h</div>
+        </div>
+        <div class="stat-box">
+            <div>Energi kvar</div>
+            <div id="ui-energy" class="stat-value">500 kJ</div>
+        </div>
+        <div class="stat-box">
+            <div>Lutning</div>
+            <div id="ui-slope" class="stat-value">0%</div>
+        </div>
+        <div class="stat-box">
+            <div>Tid</div>
+            <div id="ui-time" class="stat-value">0.0 s</div>
+        </div>
+    </div>
+
+    <div id="controls-info">
+        <p><strong>Kontroller:</strong><br>
+        🚴 <strong>Trampa:</strong> Tryck växelvis på <strong>VÄNSTER (←)</strong> och <strong>HÖGER (→)</strong> pilbäst.<br>
+        ↕️ <strong>Styrhöjd:</strong> Tryck på <strong>UPP (↑)</strong> och <strong>NER (↓)</strong> för att plocka flaskor (🍼) och undvika hål (🕳️)!</p>
+    </div>
+
+    <script>
+        let distanceRemaining = 5000; 
+        let speed = 0; 
+        let energy = 500; 
+        let elapsedSeconds = 0;
+        let slope = 0; 
+        
+        let cyclistX = 100; 
+        let cyclistY = 65;  
+        const laneMinY = 25;  
+        const laneMaxY = 90;  
+        
+        let lastKey = null; 
+        let gameActive = false;
+        let gameInterval = null;
+        let sceneryInterval = null;
+        
+        const cyclist = document.getElementById('cyclist');
+        const sceneryContainer = document.getElementById('scenery-container');
+        
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            gameActive = true;
+            lastKey = null;
+            cyclistY = 65;
+            cyclist.style.bottom = cyclistY + 'px';
+            
+            gameInterval = setInterval(updateGame, 50);
+            // Sänkt intervallet från 2000ms till 800ms för en tätare ström av objekt
+            sceneryInterval = setInterval(spawnScenery, 800);
+            
+            window.addEventListener('keydown', handleInput);
+        }
+
+        function handleInput(e) {
+            if (!gameActive) return;
+
+            if (energy > 0) {
+                if (e.key === 'ArrowLeft' && lastKey !== 'left') {
+                    pedal();
+                    lastKey = 'left';
+                } else if (e.key === 'ArrowRight' && lastKey !== 'right') {
+                    pedal();
+                    lastKey = 'right';
+                }
+            }
+
+            if (e.key === 'ArrowUp') {
+                cyclistY = Math.min(laneMaxY, cyclistY + 15);
+                cyclist.style.bottom = cyclistY + 'px';
+            } else if (e.key === 'ArrowDown') {
+                cyclistY = Math.max(laneMinY, cyclistY - 15);
+                cyclist.style.bottom = cyclistY + 'px';
+            }
+        }
+
+        function pedal() {
+            let energyCost = 1.5 + (slope > 0 ? slope * 0.2 : 0);
+            energy = Math.max(0, energy - energyCost);
+
+            let acceleration = 1.2 - (slope * 0.05); 
+            if (acceleration < 0.2) acceleration = 0.2; 
+            
+            speed += acceleration;
+            
+            cyclist.style.transform = lastKey === 'left' ? 'scaleX(-1) rotate(-5deg)' : 'scaleX(-1) rotate(5deg)';
+        }
+
+        function spawnScenery() {
+            if (!gameActive) return;
+
+            let roll = Math.random();
+
+            if (roll < 0.4) {
+                // Skapa en flaska på slumpad höjd
+                const bottle = document.createElement('div');
+                bottle.className = 'bottle';
+                bottle.innerHTML = '🍼';
+                bottle.style.left = '850px';
+                bottle.style.bottom = (laneMinY + Math.random() * (laneMaxY - laneMinY)) + 'px';
+                sceneryContainer.appendChild(bottle);
+            } else if (roll < 0.75) {
+                // Skapa ett hål på slumpad höjd
+                const hole = document.createElement('div');
+                hole.className = 'pothole';
+                hole.innerHTML = '🕳️';
+                hole.style.left = '850px';
+                hole.style.bottom = (laneMinY + Math.random() * (laneMaxY - laneMinY)) + 'px';
+                sceneryContainer.appendChild(hole);
+            }
+
+            // Chans för bakgrundsberg (glesare än vägobjekten)
+            if (Math.random() > 0.7) {
+                const mountain = document.createElement('div');
+                mountain.className = 'mountain';
+                mountain.style.left = '850px';
+                let scale = 0.5 + Math.random() * 0.8;
+                mountain.style.transform = `scale(${scale})`;
+                sceneryContainer.appendChild(mountain);
+            }
+        }
+
+        function updateGame() {
+            if (!gameActive) return;
+
+            elapsedSeconds += 0.05;
+
+            if (distanceRemaining > 3500) {
+                slope = 0;
+            } else if (distanceRemaining > 2000) {
+                slope = 7; 
+            } else if (distanceRemaining > 1000) {
+                slope = -4; 
+            } else {
+                slope = 12; 
+            }
+
+            let gravityEffect = (slope / 100) * 9.81 * 0.05;
+            let airResistance = 0.02 * speed;
+            
+            speed -= (airResistance + gravityEffect);
+            if (speed < 0) speed = 0;
+
+            if (energy <= 0 && slope >= 0) {
+                speed *= 0.95; 
+            }
+
+            if (speed < 5 && energy < 500) {
+                energy = Math.min(500, energy + 0.5);
+            }
+
+            let distanceMoved = speed * 0.05 * 5; 
+            distanceRemaining = Math.max(0, distanceRemaining - distanceMoved);
+
+            const elements = sceneryContainer.children;
+            for (let i = elements.length - 1; i >= 0; i--) {
+                let el = elements[i];
+                let currentLeft = parseFloat(el.style.left);
+                let moveSpeed = speed * 0.5; 
+                
+                if (el.className === 'mountain') moveSpeed = speed * 0.1; 
+
+                let newLeft = currentLeft - moveSpeed;
+                el.style.left = newLeft + 'px';
+
+                // Kollisionskontroll
+                if ((el.className === 'bottle' || el.className === 'pothole') && newLeft > 70 && newLeft < 130) {
+                    let objY = parseFloat(el.style.bottom);
+                    
+                    if (Math.abs(cyclistY - objY) < 25) {
+                        if (el.className === 'bottle') {
+                            energy = Math.min(500, energy + 100); 
+                        } else if (el.className === 'pothole') {
+                            energy = Math.max(0, energy - 50); // Tappa energi vid smäll
+                            speed *= 0.4; // Tappa mycket fart
+                            cyclist.style.transform = 'scaleX(-1) rotate(-30deg)'; // Skaka till
+                        }
+                        el.remove();
+                        continue;
+                    }
+                }
+
+                if (newLeft < -300) {
+                    el.remove();
+                }
+            }
+
+            document.getElementById('ui-distance').innerText = Math.round(distanceRemaining) + " m";
+            document.getElementById('ui-speed').innerText = Math.round(speed * 3.6) + " km/h"; 
+            document.getElementById('ui-energy').innerText = Math.round(energy) + " kJ";
+            document.getElementById('ui-slope').innerText = slope + "%";
+            document.getElementById('ui-time').innerText = elapsedSeconds.toFixed(1) + " s";
+
+            if (distanceRemaining <= 0) {
+                endGame(true);
+            }
+            
+            if (energy <= 0 && speed <= 0.1 && slope > 0) {
+                endGame(false);
+            }
+        }
+
+        function endGame(won) {
+            gameActive = false;
+            clearInterval(gameInterval);
+            clearInterval(sceneryInterval);
+            window.removeEventListener('keydown', handleInput);
+
+            const screen = document.getElementById('game-over-screen');
+            const title = document.getElementById('end-title');
+            const stats = document.getElementById('end-stats');
+
+            screen.classList.remove('hidden');
+
+            if (won) {
+                title.innerText = "Félicitations! Vinnare av etappen!";
+                title.style.color = "#fcdd00";
+                stats.innerText = `Du klockade in på ${elapsedSeconds.toFixed(1)} sekunder.\nSnyggt navigerat förbi hålen och bra plockat med flaskor!`;
+            } else {
+                title.innerText = "Abandon! (Avbrutet lopp)";
+                title.style.color = "#ff4d4d";
+                stats.innerText = "Kombinationen av potthål och brist på energi i backarna tog knäcken på dig. Försök igen!";
+            }
+        }
+
+        function resetGame() {
+            distanceRemaining = 5000;
+            speed = 0;
+            energy = 500;
+            elapsedSeconds = 0;
+            slope = 0;
+            sceneryContainer.innerHTML = '';
+            document.getElementById('game-over-screen').classList.add('hidden');
+            startGame();
+        }
+    </script>
+</body>
+</html>
