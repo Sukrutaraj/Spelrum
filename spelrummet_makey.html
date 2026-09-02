@@ -182,7 +182,7 @@ function buildCats(){
 
   CATEGORIES.forEach(function(cat){
     const games = GAMES.filter(function(g){ return g.category===cat.id && !hiddenGames.has(g.id); });
-    const allowEmpty = cat.id==='deltagarspel' || cat.id==='webb';
+    const allowEmpty = cat.id==='deltagarspel' || cat.id==='webb' || cat.id==='sonar';
     if(games.length===0 && !allowEmpty) return;
 
     const btn = document.createElement('div');
