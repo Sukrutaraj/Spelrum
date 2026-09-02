@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Kalaha – Touch</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
+body{
+  font-family:Arial,Helvetica,sans-serif;
+  background:#176b45;
+  color:white;
+  touch-action:manipulation;
+  display:flex;
+  flex-direction:column;
+}
+header{
+  height:78px;flex:0 0 78px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 22px;background:rgba(0,0,0,.18)
+}
+h1{margin:0;font-size:clamp(24px,3vw,38px)}
+.controls{display:flex;gap:10px}
+button{
+  border:0;border-radius:14px;background:white;color:#174b35;
+  font-size:clamp(16px,1.8vw,22px);font-weight:700;
+  padding:12px 18px;min-height:50px;cursor:pointer;
+  box-shadow:0 3px 8px rgba(0,0,0,.18)
+}
+button:active{transform:scale(.97)}
+#game{
+  flex:1;display:flex;flex-direction:column;justify-content:center;
+  padding:15px;overflow:hidden
+}
+.board{
+  width:min(1180px,96vw);
+  margin:auto;
+  background:#a96532;
+  border:12px solid #7a451f;
+  border-radius:48px;
+  box-shadow:inset 0 0 0 4px rgba(255,255,255,.12),0 12px 30px rgba(0,0,0,.3);
+  padding:clamp(18px,3vw,38px);
+  position:relative;
+}
+.player-label{
+  text-align:center;font-weight:800;
+  font-size:clamp(17px,2vw,25px);
+  margin:0 0 12px;
+}
+.player-label.bottom{margin:12px 0 0}
+.rows{
+  display:grid;
+  grid-template-columns:clamp(75px,10vw,130px) 1fr clamp(75px,10vw,130px);
+  grid-template-rows:1fr 1fr;
+  gap:clamp(10px,1.5vw,20px);
+  align-items:stretch;
+}
+.store{
+  grid-row:1 / 3;
+  border-radius:50%;
+  background:#5c351f;
+  border:6px solid #7a451f;
+  min-height:190px;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;
+  box-shadow:inset 0 5px 12px rgba(0,0,0,.35),0 4px 8px rgba(0,0,0,.18);
+  cursor:default;
+}
+.store.right{grid-column:3}
+.store.left{grid-column:1}
+.store .count{
+  font-size:clamp(36px,5vw,68px);font-weight:900;line-height:1
+}
+.store .name{
+  font-size:clamp(13px,1.5vw,19px);opacity:.8;margin-top:5px
+}
+.pits{
+  display:grid;grid-template-columns:repeat(6,1fr);
+  gap:clamp(7px,1.2vw,16px)
+}
+.pits.top{grid-column:2;grid-row:1}
+.pits.bottom{grid-column:2;grid-row:2}
+.pit{
+  border:0;border-radius:50%;
+  background:#5c351f;
+  box-shadow:inset 0 5px 12px rgba(0,0,0,.4),0 4px 7px rgba(0,0,0,.18);
+  min-height:clamp(90px,11vw,150px);
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  transition:transform .12s,box-shadow .12s;
+}
+.pit:active{transform:scale(.96)}
+.pit.active{
+  box-shadow:0 0 0 5px #ffd84d,inset 0 5px 12px rgba(0,0,0,.4),0 5px 10px rgba(0,0,0,.2)
+}
+.pit.disabled{opacity:.65;cursor:default}
+.stones{
+  width:80%;height:80%;
+  display:flex;flex-wrap:wrap;align-content:center;justify-content:center;
+  gap:3px
+}
+.stone{
+  width:clamp(10px,1.25vw,17px);height:clamp(10px,1.25vw,17px);
+  border-radius:50%;
+  background:#e7c36a;
+  border:2px solid rgba(0,0,0,.2);
+  box-shadow:1px 2px 3px rgba(0,0,0,.3)
+}
+.count{
+  position:absolute;right:8px;top:5px;
+  font-size:clamp(14px,1.5vw,21px);font-weight:900;
+  color:#fff;background:rgba(0,0,0,.35);
+  border-radius:20px;padding:2px 7px
+}
+#message{
+  position:fixed;left:50%;bottom:13px;transform:translateX(-50%);
+  background:rgba(0,0,0,.48);border-radius:20px;
+  padding:8px 17px;font-size:clamp(14px,1.5vw,19px);
+  z-index:1000;white-space:nowrap;pointer-events:none
+}
+#turn{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  background:rgba(255,216,77,.95);color:#3e2b16;
+  border-radius:25px;padding:10px 22px;
+  font-size:clamp(18px,2.2vw,29px);font-weight:900;
+  box-shadow:0 5px 12px rgba(0,0,0,.25);
+  pointer-events:none;z-index:10
+}
+#win{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.62);
+  z-index:5000;align-items:center;justify-content:center;text-align:center
+}
+#winBox{
+  background:white;color:#174b35;padding:35px;border-radius:24px;
+  width:min(90vw,520px);box-shadow:0 12px 40px rgba(0,0,0,.35)
+}
+#winBox h2{font-size:40px;margin:0 0 12px}
+#winBox p{font-size:22px;margin:0 0 24px}
+@media(max-width:700px){
+ header{height:64px;flex-basis:64px;padding:7px 10px}
+ button{padding:8px 12px;min-height:44px}
+ #game{padding:8px}
+ .board{border-width:8px;border-radius:30px;padding:13px}
+ .store{min-height:145px;border-width:4px}
+ .rows{grid-template-columns:58px 1fr 58px;gap:7px}
+ .pits{gap:5px}
+ .pit{min-height:72px}
+ .stone{width:8px;height:8px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🟤 Kalaha</h1>
+  <div class="controls">
+    <button id="newGame">Ny omgång</button>
+  </div>
+</header>
+
+<main id="game">
+  <div class="board">
+    <div class="player-label" id="topLabel">Spelare 2</div>
+
+    <div class="rows">
+      <div class="store left">
+        <div class="count" id="store1">0</div>
+        <div class="name">Spelare 1</div>
+      </div>
+
+      <div class="pits top" id="topPits"></div>
+
+      <div class="store right">
+        <div class="count" id="store2">0</div>
+        <div class="name">Spelare 2</div>
+      </div>
+
+      <div class="pits bottom" id="bottomPits"></div>
+    </div>
+
+    <div class="player-label bottom" id="bottomLabel">Spelare 1</div>
+    <div id="turn">Spelare 1</div>
+  </div>
+</main>
+
+<div id="message">Tryck på en grop på din sida för att börja.</div>
+
+<div id="win">
+  <div id="winBox">
+    <h2 id="winTitle">🎉 Spelet är slut!</h2>
+    <p id="winText"></p>
+    <button id="playAgain">Spela igen</button>
+  </div>
+</div>
+
+<script>
+let pits=[4,4,4,4,4,4,4,4,4,4,4,4];
+let stores=[0,0];
+let player=0;
+let busy=false;
+
+const topPitsEl=document.getElementById('topPits');
+const bottomPitsEl=document.getElementById('bottomPits');
+
+function render(){
+  topPitsEl.innerHTML='';bottomPitsEl.innerHTML='';
+  // Bottom: player 1, left -> right corresponds to pits 0..5.
+  for(let i=0;i<6;i++) bottomPitsEl.appendChild(makePit(i));
+  // Top: player 2, shown right -> left so play direction is natural around board.
+  for(let i=11;i>=6;i--) topPitsEl.appendChild(makePit(i));
+
+  document.getElementById('store1').textContent=stores[0];
+  document.getElementById('store2').textContent=stores[1];
+  document.getElementById('turn').textContent='Spelare '+(player+1);
+  document.getElementById('bottomLabel').textContent='Spelare 1';
+  document.getElementById('topLabel').textContent='Spelare 2';
+
+  document.getElementById('message').textContent =
+    player===0 ? 'Spelare 1: välj en grop.' : 'Spelare 2: välj en grop.';
+}
+
+function makePit(i){
+  const d=document.createElement('div');
+  d.className='pit';
+  if((player===0 && i>=6)||(player===1 && i<6)) d.classList.add('disabled');
+  d.dataset.index=i;
+
+  const stones=document.createElement('div');
+  stones.className='stones';
+  for(let s=0;s<pits[i] && s<24;s++){
+    const st=document.createElement('div');
+    st.className='stone';
+    stones.appendChild(st);
+  }
+  d.appendChild(stones);
+
+  const count=document.createElement('div');
+  count.className='count';
+  count.textContent=pits[i];
+  d.appendChild(count);
+
+  d.addEventListener('click',()=>play(i));
+  return d;
+}
+
+function reset(){
+  pits=[4,4,4,4,4,4,4,4,4,4,4,4];
+  stores=[0,0];player=0;busy=false;
+  document.getElementById('win').style.display='none';
+  render();
+}
+
+function ownPit(i){
+  return player===0 ? i<6 : i>=6;
+}
+
+function nextIndex(i){
+  return (i+1)%14;
+}
+
+function storeForIndex(i){
+  if(i===6)return 0;
+  if(i===13)return 1;
+  return -1;
+}
+
+function pitIndexFromBoard(i){
+  return i;
+}
+
+async function play(i){
+  if(busy || !ownPit(i) || pits[i]===0) return;
+
+  busy=true;
+  let stones=pits[i];
+  pits[i]=0;
+  render();
+
+  let pos=i;
+  while(stones>0){
+    pos=nextIndex(pos);
+
+    // Skip opponent's store.
+    if(player===0 && pos===13) continue;
+    if(player===1 && pos===6) continue;
+
+    if(pos===6){ stores[0]++; stones--; }
+    else if(pos===13){ stores[1]++; stones--; }
+    else { pits[pos]++; stones--; }
+
+    render();
+    await wait(120);
+  }
+
+  // Capture: last stone landed in an empty own pit.
+  if(pos!==6 && pos!==13 && ownPit(pos) && pits[pos]===1){
+    const opposite=12-pos;
+    if(pits[opposite]>0){
+      const captured=pits[opposite]+pits[pos];
+      pits[opposite]=0;
+      pits[pos]=0;
+      stores[player]+=captured;
+      render();
+      await wait(250);
+    }
+  }
+
+  // Landing in own store means another turn.
+  const extra=(player===0 && pos===6)||(player===1 && pos===13);
+
+  if(checkEnd()){
+    finishGame();
+    busy=false;
+    return;
+  }
+
+  if(!extra) player=1-player;
+  busy=false;
+  render();
+}
+
+function checkEnd(){
+  const p1=pits.slice(0,6).reduce((a,b)=>a+b,0);
+  const p2=pits.slice(6).reduce((a,b)=>a+b,0);
+  return p1===0 || p2===0;
+}
+
+function finishGame(){
+  let p1=pits.slice(0,6).reduce((a,b)=>a+b,0);
+  let p2=pits.slice(6).reduce((a,b)=>a+b,0);
+  stores[0]+=p1;stores[1]+=p2;
+  pits=[0,0,0,0,0,0,0,0,0,0,0,0];
+  render();
+
+  let title='🎉 Spelet är slut!';
+  let text='';
+  if(stores[0]>stores[1]) text='Spelare 1 vinner med '+stores[0]+' stenar!';
+  else if(stores[1]>stores[0]) text='Spelare 2 vinner med '+stores[1]+' stenar!';
+  else text='Det blev oavgjort – '+stores[0]+' stenar var!';
+
+  document.getElementById('winTitle').textContent=title;
+  document.getElementById('winText').textContent=text;
+  setTimeout(()=>document.getElementById('win').style.display='flex',350);
+}
+
+function wait(ms){return new Promise(r=>setTimeout(r,ms));}
+
+document.getElementById('newGame').addEventListener('click',reset);
+document.getElementById('playAgain').addEventListener('click',reset);
+
+reset();
+</script>
+</body>
+</html>
