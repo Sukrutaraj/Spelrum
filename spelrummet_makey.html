@@ -301,7 +301,7 @@ function buildCats(){
 
   CATEGORIES.forEach(cat=>{
     const games = GAMES.filter(g=>g.category===cat.id);
-    if(games.length===0 && cat.id!=='deltagarspel') return;
+    if(games.length===0 && cat.id!=='deltagarspel' && cat.id!=='webb') return;
 
     const btn = document.createElement('div');
     btn.className = 'cat-btn';
@@ -331,39 +331,8 @@ function buildCats(){
     '<div style="font-size:clamp(20px,3vw,28px);">📋</div>'+
     '<div style="font-size:clamp(13px,2vw,16px);font-weight:700;color:#4ade80;">Hur skapar man ett spel?</div>'+
     '<div style="font-size:clamp(11px,1.5vw,13px);color:#555;text-align:center;">Tryck här för steg-för-steg checklistan</div>';
-  cats.appendChild(how); lang="sv">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=
-  {id:"bussresan",name:"Bussresan",emoji:"🚌",desc:"Kör bussen och plocka upp passagerare",category:"lss"},
-  {id:"stadspelet",name:"Städspelet",emoji:"🧹",desc:"Dammsug och sortera sopor rätt!",category:"lss"},device-width, initial-scale=1.0, user-scalable=no">
-<title>Spelrummet – MakeyMakey</title>
-<style>
-/* fonts: system fallbacks — works 100% offline */
-*{box-sizing:border-box;margin:0;padding:0;}
-html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;background:#0a140a;color:#f0f0f0;}
-#bg{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse at 25% 45%,#0a1f0a 0%,#0a140a 65%);}
-.orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:0.11;animation:orbf linear infinite alternate;}
-@keyframes orbf{from{transform:translate(0,0);}to{transform:translate(35px,-25px);}}
-.view{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;}
-.view.active{display:flex;}
-.top-bar{flex-shrink:0;display:flex;align-items:center;padding:clamp(8px,1.5vh,16px) clamp(12px,2vw,24px);gap:12px;background:rgba(0,0,0,0.35);border-bottom:1px solid rgba(255,255,255,0.06);}
-.back-btn{font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;font-size:15px;border:none;border-radius:8px;background:rgba(255,255,255,0.09);color:#e0e0f0;padding:7px 16px;cursor:pointer;transition:background .15s;white-space:nowrap;-webkit-tap-highlight-color:transparent;}
-.back-btn:hover{background:rgba(255,255,255,0.18);}
-.home-btn{font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;font-size:15px;border:none;border-radius:8px;background:rgba(34,197,94,0.15);color:#22c55e;padding:7px 16px;cursor:pointer;transition:background .15s;white-space:nowrap;text-decoration:none;display:flex;align-items:center;}
-.home-btn:hover{background:rgba(34,197,94,0.25);}
-.bar-title{font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;font-size:clamp(14px,2vw,20px);letter-spacing:2px;flex:1;}
-
-/* Category view */
-#viewCats .top-bar{border-bottom:none;background:transparent;}
-.hub-header{text-align:center;padding:clamp(8px,1.5vh,18px) 16px clamp(4px,1vh,10px);flex-shrink:0;}
-.hub-title{font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;font-size:clamp(22px,4vw,50px);letter-spacing:3px;background:linear-gradient(135deg,#22c55e,#86efac,#4ade80);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;}
-.hub-sub{font-size:clamp(10px,1.2vw,13px);letter-spacing:3px;text-transform:uppercase;color:#1a3a1a;margin-top:3px;}
-
-/* MakeyMakey key display */
-.key-display{
-  display:flex;justify-content:center;align-items:center;gap:6px;
-  flex-shrink:0;padding:8px 0 4px;flex-wrap:wrap;
+    list.appendChild(how);
+}
 }
 .key{
   background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);
@@ -633,7 +602,7 @@ function buildCats(){
 
   CATEGORIES.forEach(cat=>{
     const games = GAMES.filter(g=>g.category===cat.id);
-    if(games.length===0 && cat.id!=='deltagarspel') return;
+    if(games.length===0 && cat.id!=='deltagarspel' && cat.id!=='webb') return;
 
     const btn = document.createElement('div');
     btn.className = 'cat-btn';
