@@ -444,31 +444,73 @@ function deleteGame(gameId, folder, filename){
   });
 }
 
-</script>
 
-<!-- ── Upload modal (all categories) ── -->
-<div id="uploadModal" style="display:none;position:fixed;inset:0;z-index:300;
-  background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;">
-  <div style="background:#12121f;border:1.5px solid rgba(255,255,255,0.1);border-radius:20px;
-    padding:28px 24px;width:90%;max-width:400px;display:flex;flex-direction:column;gap:14px;">
-    <div id="modalTitle" style="font-size:clamp(16px,3vw,22px);font-weight:900;color:#fff;text-align:center;"></div>
-    <div style="font-size:13px;color:#555;text-align:center;">Ange lösenord för att lägga till spel</div>
+/* ── Upload modal JS ── */
+var _uploadCat = null;
+var _UPLOAD_HASH = '705';
+
+function showUploadModal(cat){
+  _uploadCat = cat;
+  var title = document.getElementById('modalTitle');
+  if(title) title.textContent = '➕ Lägg till i ' + cat.name;
+  var pwd = document.getElementById('modalPwd');
+  if(pwd){ pwd.value=''; setTimeout(function(){pwd.focus();},150); }
+  var err = document.getElementById('modalErr');
+  if(err) err.textContent='';
+  var modal = document.getElementById('uploadModal');
+  if(modal) modal.style.display='flex';
+}
+function closeUploadModal(){
+  var modal = document.getElementById('uploadModal');
+  if(modal) modal.style.display='none';
+  _uploadCat = null;
+}
+function submitUploadModal(){
+  var pwd = document.getElementById('modalPwd').value;
+  var h = String(pwd.split('').reduce(function(a,ch){return a+ch.charCodeAt(0);},0));
+  if(h !== _UPLOAD_HASH){
+    document.getElementById('modalErr').textContent='❌ Fel lösenord!';
+    document.getElementById('modalPwd').value='';
+    return;
+  }
+  closeUploadModal();
+  var param = _uploadCat ? '?cat='+_uploadCat.id : '';
+  window.location.href = 'ladda_upp.html' + param;
+}
+(function(){
+  var inp = document.getElementById('modalPwd');
+  if(inp) inp.addEventListener('keydown',function(e){if(e.key==='Enter')submitUploadModal();});
+})();
+
+</script>
+<!-- ── Upload modal ── -->
+<div id="uploadModal" style="display:none;position:fixed;inset:0;z-index:999;
+  background:rgba(0,0,0,0.88);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#12121f;border:1.5px solid rgba(167,139,250,0.3);border-radius:20px;
+    padding:28px 24px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:14px;">
+    <div id="modalTitle" style="font-size:clamp(16px,3vw,22px);font-weight:900;
+      color:#fff;text-align:center;letter-spacing:1px;"></div>
+    <div style="font-size:13px;color:#666;text-align:center;">
+      Ange lösenord för att lägga till spel i den här kategorin
+    </div>
     <input type="password" id="modalPwd" placeholder="Lösenord"
       style="background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.12);
-        border-radius:10px;padding:11px 14px;font-size:15px;color:#fff;outline:none;font-family:inherit;width:100%;">
+        border-radius:10px;padding:12px 14px;font-size:16px;color:#fff;
+        outline:none;font-family:inherit;width:100%;">
     <div style="display:flex;gap:10px;">
       <button onclick="submitUploadModal()"
         style="flex:1;font-weight:700;font-size:15px;border:none;border-radius:10px;
-          padding:11px;cursor:pointer;background:linear-gradient(135deg,#6d28d9,#a78bfa);color:#fff;">
-        ✅ Öppna uppladdning
+          padding:12px;cursor:pointer;
+          background:linear-gradient(135deg,#6d28d9,#a78bfa);color:#fff;">
+        ✅ Gå vidare
       </button>
       <button onclick="closeUploadModal()"
         style="font-weight:700;font-size:15px;border:none;border-radius:10px;
-          padding:11px 16px;cursor:pointer;background:rgba(255,255,255,0.08);color:#ccc;">
-        ✕
-      </button>
+          padding:12px 16px;cursor:pointer;
+          background:rgba(255,255,255,0.08);color:#ccc;">✕</button>
     </div>
-    <div id="modalErr" style="color:#f87171;font-size:13px;text-align:center;min-height:18px;"></div>
+    <div id="modalErr" style="color:#f87171;font-size:13px;
+      text-align:center;min-height:18px;"></div>
   </div>
 </div>
 </body>
