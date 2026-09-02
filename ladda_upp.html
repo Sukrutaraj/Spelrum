@@ -331,6 +331,32 @@ function resetForm(){
 }
 
 buildEmojiPicker();
+
+// Pre-select category from URL param
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const cat = params.get('cat');
+  if(cat){
+    const sel = document.getElementById('gameCategory');
+    if(cat==='makey') sel.value='makey';
+    else sel.value='touch';
+  }
+})();
+
+// Pre-select category from URL param (e.g. ?cat=hjarna)
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const cat = params.get('cat');
+  if(cat){
+    const sel = document.getElementById('gameCategory');
+    // Map hub category id to upload select value
+    const map = {
+      'sallskap':'touch','boll':'touch','hjarna':'touch',
+      'strategi':'touch','webb':'touch','deltagarspel':'touch'
+    };
+    sel.value = map[cat] || 'touch';
+  }
+})();
 </script>
 </body>
 </html>

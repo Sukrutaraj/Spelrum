@@ -165,6 +165,12 @@ const GAMES = [
   {id:"balansen",name:"Balansen",emoji:"⚖️",desc:"Balansera höger sida!",category:"hjarna"},
   {id:"vad_forandrades",name:"Vad förändrades?",emoji:"👁️",desc:"Hitta vad som ändrades!",category:"hjarna"},
   {id:"schack",name:"Schack",emoji:"♟️",desc:"Mot dator eller en vän",category:"strategi"},
+
+  {id:"jigsawplanet",name:"Jigsawplanet",emoji:"🧩",desc:"Skapa och lös pussel av egna bilder!",category:"webb",url:"https://www.jigsawplanet.com"},
+  {id:"thissand",name:"This is Sand",emoji:"⏳",desc:"Rita med sand i olika färger — avkopplande!",category:"webb",url:"https://thisissand.com"},
+  {id:"sketchpad",name:"Sketchpad",emoji:"🎨",desc:"Rita fritt med penslar och färger",category:"webb",url:"https://sketch.io/sketchpad"},
+  {id:"agame_relax",name:"Relaxing Puzzles",emoji:"🌸",desc:"Lugna pusselspel online",category:"webb",url:"https://www.agame.com/games/jigsaw-puzzles"},
+  {id:"musiclab",name:"Chrome Music Lab",emoji:"🎵",desc:"Utforska musik och ljud interaktivt!",category:"webb",url:"https://musiclab.chromeexperiments.com"},
 ];
 
 const CATEGORIES = [
@@ -180,6 +186,9 @@ const CATEGORIES = [
   {id:'strategi',    name:'Strategispel',         icon:'♟️', color:'#60a5fa',
    desc:'Schack — snart även Go & Backgammon',
    bg:'linear-gradient(135deg,#0c2a4a,#1e40af)'},
+  {id:'webb',name:'Webb & Aktiviteter',icon:'🌐',color:'#06b6d4',
+   desc:'Jigsawplanet, This is Sand och fler avkopplande sidor',
+   bg:'linear-gradient(135deg,#164e63,#0e7490)'},
   {id:'deltagarspel',name:'Deltagarspel',         icon:'⭐', color:'#f0abfc',
    desc:'Spel byggda av deltagarna',
    bg:'linear-gradient(135deg,#500724,#9d174d)'},
@@ -247,15 +256,17 @@ function showGames(cat){
     }
     grid.appendChild(card);
   });
-  if(cat.id==='deltagarspel'){
-    const add = document.createElement('a');
+  // ── "Lägg till spel" on EVERY category (password protected) ──
+  {
+    const add = document.createElement('div');
     add.className = 'game-card';
-    add.href = 'ladda_upp.html';
-    add.style.cssText = 'text-decoration:none;border-color:rgba(167,139,250,0.4);border-style:dashed;background:rgba(167,139,250,0.06);';
+    add.style.cssText = 'cursor:pointer;text-decoration:none;border-color:'+cat.color+'40;border-style:dashed;background:rgba(255,255,255,0.03);';
     add.innerHTML =
-      '<div class="card-emoji" style="font-size:clamp(28px,4.5vw,48px);">➕</div>'+
-      '<div class="card-name" style="color:#a78bfa;">Lägg till spel</div>'+
-      '<div class="card-desc" style="color:#6a5a8a;">Tryck här för att ladda upp ditt spel</div>';
+      '<div class="card-emoji" style="font-size:clamp(24px,4vw,42px);opacity:0.5;">➕</div>'+
+      '<div class="card-name" style="color:'+cat.color+';opacity:0.7;">Lägg till spel</div>'+
+      '<div class="card-desc" style="color:#555;">Ladda upp ett spel till den här kategorin</div>';
+    add.addEventListener('click', ()=>showUploadModal(cat));
+    add.addEventListener('touchend', e=>{e.preventDefault();showUploadModal(cat);});
     grid.appendChild(add);
   }
   const title = document.getElementById('gamesBarTitle');
@@ -265,6 +276,8 @@ function showGames(cat){
 }
 
 function openGame(g){
+  // External link — open in new tab
+  if(g.url){ window.open(g.url,'_blank'); return; }
   const b64 = GAME_B64[g.id] || g.b64;
   if(!b64){ alert('Spelet saknas!'); return; }
   const html = decodeURIComponent(escape(atob(b64)));
@@ -432,6 +445,32 @@ function deleteGame(gameId, folder, filename){
 }
 
 </script>
+
+<!-- ── Upload modal (all categories) ── -->
+<div id="uploadModal" style="display:none;position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;">
+  <div style="background:#12121f;border:1.5px solid rgba(255,255,255,0.1);border-radius:20px;
+    padding:28px 24px;width:90%;max-width:400px;display:flex;flex-direction:column;gap:14px;">
+    <div id="modalTitle" style="font-size:clamp(16px,3vw,22px);font-weight:900;color:#fff;text-align:center;"></div>
+    <div style="font-size:13px;color:#555;text-align:center;">Ange lösenord för att lägga till spel</div>
+    <input type="password" id="modalPwd" placeholder="Lösenord"
+      style="background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.12);
+        border-radius:10px;padding:11px 14px;font-size:15px;color:#fff;outline:none;font-family:inherit;width:100%;">
+    <div style="display:flex;gap:10px;">
+      <button onclick="submitUploadModal()"
+        style="flex:1;font-weight:700;font-size:15px;border:none;border-radius:10px;
+          padding:11px;cursor:pointer;background:linear-gradient(135deg,#6d28d9,#a78bfa);color:#fff;">
+        ✅ Öppna uppladdning
+      </button>
+      <button onclick="closeUploadModal()"
+        style="font-weight:700;font-size:15px;border:none;border-radius:10px;
+          padding:11px 16px;cursor:pointer;background:rgba(255,255,255,0.08);color:#ccc;">
+        ✕
+      </button>
+    </div>
+    <div id="modalErr" style="color:#f87171;font-size:13px;text-align:center;min-height:18px;"></div>
+  </div>
+</div>
 </body>
 </html
   {id:"fargminne",name:"Färgminne",emoji:"🎨",desc:"Titta på sekvensen — återskapa den!",category:"hjarna"},>
