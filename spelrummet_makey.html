@@ -43,11 +43,18 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 #gameFrame{flex:1;border:none;width:100%;background:#000;}
 #homeBtn{position:fixed;bottom:12px;left:12px;z-index:200;font-size:13px;font-weight:700;border:none;border-radius:8px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);padding:6px 14px;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:6px;transition:background .15s;-webkit-tap-highlight-color:transparent;}
 #homeBtn:hover{background:rgba(255,255,255,0.2);}
+#staffBtn{position:fixed;top:10px;right:10px;z-index:200;font-size:13px;font-weight:700;
+  border:none;border-radius:8px;background:rgba(255,255,255,0.08);
+  color:rgba(255,255,255,0.5);padding:6px 12px;cursor:pointer;
+  transition:all .15s;-webkit-tap-highlight-color:transparent;}
+#staffBtn.active{background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);}
+#staffBtn:hover{background:rgba(255,255,255,0.15);}
 </style>
 </head>
 <body>
 
 <a id="homeBtn" href="index.html">🏠 Spelrummet</a>
+<button id="staffBtn" onclick="toggleStaff()">🔑 Personal</button>
 
 <div id="bg">
   <div class="orb" style="width:600px;height:600px;background:#059669;top:-150px;left:-150px;animation-duration:17s;"></div>
@@ -138,9 +145,6 @@ const GAMES = [
   {id:"reaktion",name:"Reaktionsspel",emoji:"⚡",desc:"Solo, Duell eller Riktning",category:"mellanslag"},
   {id:"collect",name:"Samla Stjärnor",emoji:"⭐",desc:"Samla ⭐ — bomber exploderar 💥",category:"action"},
   {id:"dodge",name:"Dodge",emoji:"🚗",desc:"Undvik hinder med ←→",category:"action"},
-  {id:"handla",name:"Handla i Affären",emoji:"🛒",desc:"Hitta alla varor på listan!",category:"lss"},
-  {id:"bussresan",name:"Bussresan",emoji:"🚌",desc:"Kör bussen och plocka upp passagerare",category:"lss"},
-  {id:"stadspelet",name:"Städspelet",emoji:"🧹",desc:"Dammsug och sortera sopor rätt!",category:"lss"},
   {id:"jigsawplanet",name:"Jigsawplanet",emoji:"🧩",desc:"Skapa och lös pussel av egna bilder!",category:"webb",url:"https://www.jigsawplanet.com"},
   {id:"thissand",name:"This is Sand",emoji:"⏳",desc:"Rita med sand i olika färger!",category:"webb",url:"https://thisissand.com"},
   {id:"musiclab",name:"Chrome Music Lab",emoji:"🎵",desc:"Utforska musik och ljud!",category:"webb",url:"https://musiclab.chromeexperiments.com"},
@@ -158,9 +162,6 @@ const CATEGORIES = [
   {id:'action',      name:'Kombination',        icon:'🎮', color:'#34d399',
    desc:'Piltangenter + action-knappar',
    bg:'linear-gradient(135deg,#0f4c35,#10b981)'},
-  {id:'lss',         name:'LSS-spel',           icon:'🏠', color:'#6ee7b7',
-   desc:'Vardagliga färdigheter',
-   bg:'linear-gradient(135deg,#064e3b,#059669)'},
   {id:'webb',        name:'Webb & Aktiviteter', icon:'🌐', color:'#06b6d4',
    desc:'Jigsawplanet, This is Sand och fler',
    bg:'linear-gradient(135deg,#164e63,#0e7490)'},
@@ -177,7 +178,7 @@ function buildCats(){
   list.innerHTML = '';
 
   CATEGORIES.forEach(function(cat){
-    const games = GAMES.filter(function(g){ return g.category===cat.id; });
+    const games = GAMES.filter(function(g){ return g.category===cat.id && !hiddenGames.has(g.id); });
     const allowEmpty = cat.id==='deltagarspel' || cat.id==='webb';
     if(games.length===0 && !allowEmpty) return;
 
@@ -229,7 +230,7 @@ function showGames(cat){
       '<div class="card-emoji">'+g.emoji+'</div>'+
       '<div class="card-name" style="color:'+cat.color+'">'+g.name+'</div>'+
       '<div class="card-desc">'+g.desc+'</div>'+
-      (isDeltagar ? '<button class="card-del" title="Ta bort">🗑</button>' : '');
+      (staffMode ? '<button class="card-del" title="Ta bort">🗑</button>' : '');
     card.addEventListener('click', function(e){
       if(e.target.classList.contains('card-del')) return;
       openGame(g);
@@ -238,14 +239,20 @@ function showGames(cat){
       if(e.target.classList.contains('card-del')) return;
       e.preventDefault(); openGame(g);
     });
-    if(isDeltagar){
-      var delBtn = card.querySelector('.card-del');
-      if(delBtn){
-        delBtn.addEventListener('pointerdown', function(e){
-          e.stopPropagation(); e.preventDefault();
+    var delBtn = card.querySelector('.card-del');
+    if(delBtn){
+      delBtn.addEventListener('pointerdown', function(e){
+        e.stopPropagation(); e.preventDefault();
+        if(isDeltagar){
           deleteGame(g.id, folder, g.file||'');
-        });
-      }
+        } else {
+          // Built-in game: hide locally until page reload
+          if(confirm('Dölj "'+g.name+'" från listan? (Syns igen vid omladdning)')){
+            hiddenGames.add(g.id);
+            showGames(currentCat);
+          }
+        }
+      });
     }
     grid.appendChild(card);
   });
@@ -417,6 +424,36 @@ async function fetchDeltagar(folder){
     if(currentCat&&currentCat.id==='deltagarspel') showGames(currentCat);
     else buildCats();
   }catch(e){console.warn('GitHub fetch failed:',e);}
+}
+
+
+/* ── Staff mode ── */
+var staffMode  = false;
+var hiddenGames = new Set();
+var STAFF_HASH  = '705'; // same password: Rolig0301
+
+function toggleStaff(){
+  if(staffMode){
+    // Log out
+    staffMode = false;
+    document.getElementById('staffBtn').textContent = '🔑 Personal';
+    document.getElementById('staffBtn').classList.remove('active');
+    if(currentCat) showGames(currentCat);
+    return;
+  }
+  // Log in
+  var pwd = prompt('Lösenord för personal:');
+  if(!pwd) return;
+  var h = String(pwd.split('').reduce(function(a,ch){return a+ch.charCodeAt(0);},0));
+  if(h !== STAFF_HASH){
+    alert('Fel lösenord!');
+    return;
+  }
+  staffMode = true;
+  document.getElementById('staffBtn').textContent = '🔒 Logga ut';
+  document.getElementById('staffBtn').classList.add('active');
+  alert('Personal-läge aktiverat. Nu syns 🗑️ på alla spelkort.');
+  if(currentCat) showGames(currentCat);
 }
 
 buildCats();
