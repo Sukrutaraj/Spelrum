@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Solitär – Touch</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #176b45;
+    color: white;
+    touch-action: manipulation;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  header {
+    height: 78px;
+    flex: 0 0 78px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 22px;
+    background: rgba(0,0,0,.18);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(24px, 3vw, 38px);
+    letter-spacing: .5px;
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+  }
+
+  button {
+    border: 0;
+    border-radius: 14px;
+    background: #fff;
+    color: #174b35;
+    font-size: clamp(16px, 1.8vw, 22px);
+    font-weight: 700;
+    padding: 12px 18px;
+    min-height: 50px;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,.18);
+  }
+
+  button:active { transform: scale(.97); }
+
+  #game {
+    flex: 1;
+    position: relative;
+    padding: 18px;
+    overflow: hidden;
+  }
+
+  #topRow {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(60px, 1fr));
+    gap: clamp(8px, 1.2vw, 18px);
+    max-width: 1250px;
+    margin: 0 auto;
+  }
+
+  .pile {
+    position: relative;
+    aspect-ratio: 0.70;
+    border-radius: 12px;
+  }
+
+  .empty {
+    border: 3px dashed rgba(255,255,255,.28);
+    background: rgba(255,255,255,.05);
+  }
+
+  #tableau {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(60px, 1fr));
+    gap: clamp(8px, 1.2vw, 18px);
+    max-width: 1250px;
+    margin: 24px auto 0;
+    height: calc(100% - 190px);
+  }
+
+  .column {
+    position: relative;
+    min-width: 0;
+  }
+
+  .card {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    aspect-ratio: 0.70;
+    border-radius: 12px;
+    background: #fff;
+    color: #111;
+    border: 1px solid #d4d4d4;
+    box-shadow: 0 4px 8px rgba(0,0,0,.24);
+    user-select: none;
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform .12s, box-shadow .12s;
+  }
+
+  .card.red { color: #c52222; }
+  .card.face-down {
+    background:
+      linear-gradient(135deg, #2d5fa8 25%, transparent 25%) -10px 0/20px 20px,
+      linear-gradient(225deg, #2d5fa8 25%, transparent 25%) -10px 0/20px 20px,
+      linear-gradient(315deg, #2d5fa8 25%, transparent 25%) 0 0/20px 20px,
+      linear-gradient(45deg, #2d5fa8 25%, #173e73 25%) 0 0/20px 20px;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 8px rgba(0,0,0,.25);
+  }
+
+  .card.selected {
+    transform: translateY(-8px);
+    box-shadow: 0 0 0 4px #ffd84d, 0 7px 14px rgba(0,0,0,.28);
+    z-index: 1000 !important;
+  }
+
+  .card .corner {
+    position: absolute;
+    top: 7px;
+    left: 8px;
+    font-size: clamp(17px, 2.2vw, 30px);
+    line-height: 1;
+    font-weight: 800;
+  }
+
+  .card .center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(32px, 4.4vw, 62px);
+  }
+
+  .card .bottom {
+    position: absolute;
+    right: 8px;
+    bottom: 7px;
+    font-size: clamp(17px, 2.2vw, 30px);
+    line-height: 1;
+    font-weight: 800;
+    transform: rotate(180deg);
+  }
+
+  .top-card {
+    position: absolute;
+    inset: 0;
+  }
+
+  #status {
+    position: fixed;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,.42);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: clamp(14px, 1.5vw, 19px);
+    z-index: 5000;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  #win {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.58);
+    z-index: 9000;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  #winBox {
+    background: white;
+    color: #174b35;
+    padding: 35px;
+    border-radius: 24px;
+    width: min(90vw, 500px);
+    box-shadow: 0 12px 40px rgba(0,0,0,.35);
+  }
+
+  #winBox h2 { font-size: 40px; margin: 0 0 12px; }
+  #winBox p { font-size: 22px; margin: 0 0 24px; }
+
+  @media (max-width: 700px) {
+    header { height: 64px; flex-basis: 64px; padding: 7px 10px; }
+    button { padding: 8px 12px; min-height: 44px; }
+    #game { padding: 10px 8px; }
+    #tableau { margin-top: 15px; height: calc(100% - 155px); }
+    #status { bottom: 5px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>♠ Solitär</h1>
+  <div class="controls">
+    <button id="newGame">Ny omgång</button>
+    <button id="undo">Ångra</button>
+  </div>
+</header>
+
+<main id="game">
+  <div id="topRow">
+    <div class="pile empty" id="stock" aria-label="Kortlek"></div>
+    <div class="pile empty" id="waste" aria-label="Kasta"></div>
+    <div></div>
+    <div class="pile empty foundation" data-suit="♠"></div>
+    <div class="pile empty foundation" data-suit="♥"></div>
+    <div class="pile empty foundation" data-suit="♦"></div>
+    <div class="pile empty foundation" data-suit="♣"></div>
+  </div>
+
+  <div id="tableau">
+    <div class="column" data-col="0"></div>
+    <div class="column" data-col="1"></div>
+    <div class="column" data-col="2"></div>
+    <div class="column" data-col="3"></div>
+    <div class="column" data-col="4"></div>
+    <div class="column" data-col="5"></div>
+    <div class="column" data-col="6"></div>
+  </div>
+</main>
+
+<div id="status">Tryck på ett kort för att välja det och tryck sedan på platsen där du vill lägga det.</div>
+
+<div id="win">
+  <div id="winBox">
+    <h2>🎉 Du vann!</h2>
+    <p>Alla kort ligger på rätt plats.</p>
+    <button id="playAgain">Spela igen</button>
+  </div>
+</div>
+
+<script>
+const suits = ['♠','♥','♦','♣'];
+const ranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+
+let stock = [];
+let waste = [];
+let foundations = { '♠':[], '♥':[], '♦':[], '♣':[] };
+let tableau = [[],[],[],[],[],[],[]];
+let selected = null;
+let history = [];
+
+function makeDeck() {
+  const deck = [];
+  for (const suit of suits) {
+    for (let r=0; r<ranks.length; r++) {
+      deck.push({
+        suit,
+        rank: ranks[r],
+        value: r+1,
+        faceUp: false,
+        id: suit + ranks[r] + Math.random()
+      });
+    }
+  }
+  return deck;
+}
+
+function shuffle(a) {
+  for (let i=a.length-1; i>0; i--) {
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function newGame() {
+  stock=[]; waste=[]; foundations={'♠':[],'♥':[],'♦':[],'♣':[]};
+  tableau=[[],[],[],[],[],[],[]];
+  selected=null; history=[];
+  const deck=shuffle(makeDeck());
+
+  for (let col=0; col<7; col++) {
+    for (let row=0; row<=col; row++) {
+      const c=deck.pop();
+      c.faceUp = row===col;
+      tableau[col].push(c);
+    }
+  }
+  stock=deck;
+  render();
+  setStatus('Tryck på ett kort för att välja det.');
+}
+
+function saveState() {
+  history.push(JSON.stringify({stock,waste,foundations,tableau}));
+  if (history.length>50) history.shift();
+}
+
+function restore(obj) {
+  stock=obj.stock; waste=obj.waste; foundations=obj.foundations; tableau=obj.tableau;
+  selected=null; render();
+}
+
+function undo() {
+  if (!history.length) return setStatus('Det finns inget att ångra.');
+  restore(JSON.parse(history.pop()));
+}
+
+function isRed(card) {
+  return card.suit==='♥' || card.suit==='♦';
+}
+
+function cardHTML(card) {
+  if (!card.faceUp) {
+    const d=document.createElement('div');
+    d.className='card face-down';
+    d.dataset.id=card.id;
+    return d;
+  }
+  const d=document.createElement('div');
+  d.className='card ' + (isRed(card)?'red':'');
+  d.dataset.id=card.id;
+  d.innerHTML =
+    `<div class="corner">${card.rank}<br>${card.suit}</div>`+
+    `<div class="center">${card.suit}</div>`+
+    `<div class="bottom">${card.rank}<br>${card.suit}</div>`;
+  return d;
+}
+
+function render() {
+  document.querySelectorAll('.column').forEach(c=>c.innerHTML='');
+  document.getElementById('stock').innerHTML='';
+  document.getElementById('waste').innerHTML='';
+  document.querySelectorAll('.foundation').forEach(f=>f.innerHTML='');
+
+  const stockEl=document.getElementById('stock');
+  if (stock.length) {
+    const c=cardHTML({faceUp:false,id:'stock'});
+    c.classList.add('top-card');
+    stockEl.appendChild(c);
+  }
+
+  const wasteEl=document.getElementById('waste');
+  if (waste.length) {
+    const c=cardHTML(waste[waste.length-1]);
+    c.classList.add('top-card');
+    wasteEl.appendChild(c);
+  }
+
+  document.querySelectorAll('.foundation').forEach(f=>{
+    const suit=f.dataset.suit;
+    const arr=foundations[suit];
+    if (arr.length) {
+      const c=cardHTML(arr[arr.length-1]);
+      c.classList.add('top-card');
+      f.appendChild(c);
+    } else {
+      f.innerHTML=`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(28px,4vw,55px);opacity:.35">${suit}</div>`;
+    }
+  });
+
+  tableau.forEach((col,ci)=>{
+    const el=document.querySelector(`.column[data-col="${ci}"]`);
+    col.forEach((card,i)=>{
+      const c=cardHTML(card);
+      c.style.top=(i*clampOffset())+'px';
+      c.style.zIndex=i+1;
+      if (selected && selected.type==='tableau' && selected.col===ci && selected.index<=i) c.classList.add('selected');
+      el.appendChild(c);
+    });
+  });
+}
+
+function clampOffset() {
+  const h=document.querySelector('.column')?.clientHeight || 500;
+  const maxCards=13;
+  return Math.min(58, Math.max(30, (h-100)/maxCards));
+}
+
+function findCard(id) {
+  for (let col=0;col<7;col++) {
+    for (let i=0;i<tableau[col].length;i++) {
+      if (tableau[col][i].id===id) return {type:'tableau',col,index:i,card:tableau[col][i]};
+    }
+  }
+  if (waste.length && waste[waste.length-1].id===id) return {type:'waste',index:waste.length-1,card:waste[waste.length-1]};
+  return null;
+}
+
+function canMoveSequence(cards) {
+  for (let i=1;i<cards.length;i++) {
+    if (isRed(cards[i])===isRed(cards[i-1])) return false;
+    if (cards[i].value!==cards[i-1].value-1) return false;
+  }
+  return true;
+}
+
+function canPlaceOnTableau(cards, destCol) {
+  const moving=cards[0];
+  const dest=tableau[destCol];
+  if (!dest.length) return moving.value===13;
+  const target=dest[dest.length-1];
+  return target.faceUp &&
+         isRed(target)!==isRed(moving) &&
+         target.value===moving.value+1;
+}
+
+function canPlaceOnFoundation(card, suit) {
+  if (card.suit!==suit) return false;
+  const f=foundations[suit];
+  return f.length ? card.value===f[f.length-1].value+1 : card.value===1;
+}
+
+function selectFrom(info) {
+  if (info.type==='tableau') {
+    const col=tableau[info.col];
+    if (!col[info.index].faceUp) return setStatus('Vänd först upp kortet.');
+    const seq=col.slice(info.index);
+    if (!canMoveSequence(seq)) return setStatus('De korten kan inte flyttas tillsammans.');
+    selected=info;
+    setStatus('Välj en tom kolumn eller ett kort i en annan kolumn.');
+    render();
+  } else if (info.type==='waste') {
+    selected=info;
+    setStatus('Välj en plats där kortet kan läggas.');
+    render();
+  }
+}
+
+function moveSelectedToTableau(destCol) {
+  if (!selected) return;
+  let cards=[];
+  if (selected.type==='tableau') cards=tableau[selected.col].slice(selected.index);
+  else cards=[waste[waste.length-1]];
+
+  if (!canPlaceOnTableau(cards,destCol)) {
+    setStatus('Kortet passar inte där.');
+    return;
+  }
+
+  saveState();
+
+  if (selected.type==='tableau') {
+    tableau[selected.col].splice(selected.index);
+    if (tableau[selected.col].length) tableau[selected.col][tableau[selected.col].length-1].faceUp=true;
+  } else {
+    waste.pop();
+  }
+
+  tableau[destCol].push(...cards);
+  selected=null;
+  render();
+  checkWin();
+}
+
+function moveSelectedToFoundation(suit) {
+  if (!selected) return;
+  let card;
+  if (selected.type==='waste') card=waste[waste.length-1];
+  else {
+    const col=tableau[selected.col];
+    if (selected.index!==col.length-1) {
+      setStatus('Bara det översta kortet kan läggas på en färdig hög.');
+      return;
+    }
+    card=col[col.length-1];
+  }
+
+  if (!canPlaceOnFoundation(card,suit)) {
+    setStatus('Kortet passar inte på den högen.');
+    return;
+  }
+
+  saveState();
+
+  if (selected.type==='waste') waste.pop();
+  else {
+    tableau[selected.col].pop();
+    if (tableau[selected.col].length) tableau[selected.col][tableau[selected.col].length-1].faceUp=true;
+  }
+
+  foundations[suit].push(card);
+  selected=null;
+  render();
+  checkWin();
+}
+
+function flipTableauCard(col) {
+  const arr=tableau[col];
+  if (!arr.length) return;
+  const card=arr[arr.length-1];
+  if (!card.faceUp) {
+    saveState();
+    card.faceUp=true;
+    render();
+    setStatus('Kortet är vänt.');
+  }
+}
+
+function stockClick() {
+  if (selected) { selected=null; render(); }
+  if (stock.length) {
+    saveState();
+    const card=stock.pop();
+    card.faceUp=true;
+    waste.push(card);
+    render();
+    setStatus('Kortet är vänt. Tryck på det för att flytta det.');
+  } else if (waste.length) {
+    saveState();
+    while (waste.length) {
+      const c=waste.pop();
+      c.faceUp=false;
+      stock.push(c);
+    }
+    render();
+    setStatus('Korten har lagts tillbaka i kortleken.');
+  }
+}
+
+function setStatus(t) {
+  document.getElementById('status').textContent=t;
+}
+
+document.getElementById('stock').addEventListener('click', stockClick);
+document.getElementById('waste').addEventListener('click', ()=>{
+  if (!waste.length) return;
+  if (selected) {
+    if (selected.type==='waste') { selected=null; render(); return; }
+    selected=null; render();
+  } else selectFrom({type:'waste',card:waste[waste.length-1]});
+});
+
+document.querySelectorAll('.foundation').forEach(f=>{
+  f.addEventListener('click',()=> {
+    if (selected) moveSelectedToFoundation(f.dataset.suit);
+  });
+});
+
+document.querySelectorAll('.column').forEach(colEl=>{
+  colEl.addEventListener('click',(e)=>{
+    const ci=Number(colEl.dataset.col);
+    const cardEl=e.target.closest('.card');
+
+    if (!cardEl) {
+      if (selected) moveSelectedToTableau(ci);
+      else flipTableauCard(ci);
+      return;
+    }
+
+    const id=cardEl.dataset.id;
+    const info=findCard(id);
+    if (!info) return;
+
+    if (selected) {
+      if (selected.type==='tableau' && selected.col===ci && selected.index===info.index) {
+        selected=null; render(); return;
+      }
+      moveSelectedToTableau(ci);
+    } else {
+      if (!info.card.faceUp) {
+        if (info.index===tableau[ci].length-1) flipTableauCard(ci);
+        return;
+      }
+      selectFrom(info);
+    }
+  });
+});
+
+document.getElementById('newGame').addEventListener('click',newGame);
+document.getElementById('undo').addEventListener('click',undo);
+document.getElementById('playAgain').addEventListener('click',()=>{
+  document.getElementById('win').style.display='none';
+  newGame();
+});
+
+function checkWin() {
+  const total=Object.values(foundations).reduce((n,a)=>n+a.length,0);
+  if (total===52) {
+    document.getElementById('win').style.display='flex';
+  }
+}
+
+newGame();
+</script>
+</body>
+</html>
