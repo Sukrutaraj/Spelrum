@@ -338,6 +338,15 @@ async function fetchDeltagar(folder){
         const gid = mf.name.replace('.json','');
         if(GAMES.find(g=>g.id===gid)) continue;
 
+        // Link type — no HTML needed
+        if(meta.url){
+          var lCat=meta.cat||'deltagarspel';
+          var lValid=['sallskap','boll','hjarna','strategi','webb','deltagarspel'];
+          if(!lValid.includes(lCat)) lCat='webb';
+          GAMES.push({id:gid,name:meta.name,emoji:meta.emoji||'🔗',
+            desc:meta.desc||meta.name,category:lCat,cat:lCat,url:meta.url,file:'',isNew:true});
+          added++; continue;
+        }
         // Fetch HTML via raw URL
         const htmlFile = files.find(f=>f.name===meta.file);
         if(!htmlFile) continue;

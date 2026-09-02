@@ -15,16 +15,29 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;
   background:linear-gradient(135deg,#a78bfa,#f0abfc);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
   margin-bottom:6px;text-align:center;margin-top:10px;}
-.page-sub{font-size:13px;color:#444;letter-spacing:2px;text-align:center;margin-bottom:24px;}
-.steps{display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap;justify-content:center;}
-.step{background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);
-  border-radius:10px;padding:8px 14px;font-size:12px;color:#a78bfa;
-  display:flex;align-items:center;gap:6px;}
-.step-num{width:20px;height:20px;border-radius:50%;background:rgba(167,139,250,0.3);
-  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;}
+.page-sub{font-size:13px;color:#444;letter-spacing:2px;text-align:center;margin-bottom:20px;}
+.back-link{font-size:13px;color:#444;text-decoration:none;
+  margin-bottom:16px;align-self:flex-start;transition:color .15s;}
+.back-link:hover{color:#a78bfa;}
+
+/* Tabs */
+.tabs{display:flex;gap:0;width:100%;max-width:520px;
+  background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.08);
+  border-radius:14px;overflow:hidden;margin-bottom:18px;}
+.tab{flex:1;padding:12px 8px;text-align:center;font-size:clamp(13px,2vw,16px);
+  font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:1px;
+  border:none;background:none;color:#555;-webkit-tap-highlight-color:transparent;}
+.tab.active{background:linear-gradient(135deg,#6d28d9,#a78bfa);color:#fff;}
+.tab:first-child{border-radius:12px 0 0 12px;}
+.tab:last-child{border-radius:0 12px 12px 0;}
+
 .card{width:100%;max-width:520px;background:rgba(255,255,255,0.04);
   border:1.5px solid rgba(255,255,255,0.08);border-radius:20px;padding:26px 22px;
   display:flex;flex-direction:column;gap:16px;margin-bottom:16px;}
+.panel{display:none;flex-direction:column;align-items:center;width:100%;}
+.panel.active{display:flex;}
+
+/* Drop zone */
 #dropZone{border:2.5px dashed rgba(167,139,250,0.35);border-radius:14px;
   padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;
   background:rgba(167,139,250,0.04);-webkit-tap-highlight-color:transparent;}
@@ -33,12 +46,18 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;
 .dz-icon{font-size:38px;margin-bottom:8px;}
 .dz-text{font-size:14px;color:#666;line-height:1.6;}
 .dz-file{font-size:15px;font-weight:700;color:#4ade80;}
+
+/* URL preview */
+#urlPreview{display:none;background:rgba(6,182,212,0.06);border:1.5px solid rgba(6,182,212,0.25);
+  border-radius:12px;padding:12px 14px;font-size:13px;color:#06b6d4;word-break:break-all;
+  line-height:1.5;}
+
 label{font-size:12px;color:#555;letter-spacing:2px;text-transform:uppercase;
   margin-bottom:4px;display:block;}
-input[type=text],input[type=password],select{width:100%;
+input[type=text],input[type=password],input[type=url],select{width:100%;
   background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);
   border-radius:10px;padding:11px 14px;font-size:15px;color:#f0f0f0;outline:none;
-  transition:border-color .15s;font-family:inherit;cursor:pointer;}
+  transition:border-color .15s;font-family:inherit;}
 input:focus,select:focus{border-color:#a78bfa;}
 input[type=file]{display:none;}
 .emoji-row{display:flex;gap:8px;flex-wrap:wrap;}
@@ -64,9 +83,6 @@ input[type=file]{display:none;}
   background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin-bottom:8px;}
 #progressBar{height:100%;width:0%;background:linear-gradient(90deg,#a78bfa,#f0abfc);
   border-radius:3px;transition:width .3s;}
-.back-link{font-size:13px;color:#444;text-decoration:none;
-  margin-bottom:16px;align-self:flex-start;transition:color .15s;}
-.back-link:hover{color:#a78bfa;}
 #successScreen{display:none;flex-direction:column;align-items:center;
   gap:16px;text-align:center;width:100%;max-width:520px;}
 .success-icon{font-size:72px;}
@@ -83,17 +99,18 @@ input[type=file]{display:none;}
 <body>
 
 <a class="back-link" href="index.html">&#8592; Tillbaka till Spelrummet</a>
-<div class="page-title">&#127918; LÄGG TILL DITT SPEL</div>
-<div class="page-sub">Ditt spel publiceras direkt i Spelrummet</div>
+<div class="page-title">&#127918; LÄGG TILL INNEHÅLL</div>
+<div class="page-sub">Publiceras direkt i Spelrummet</div>
 
-<div class="steps">
-  <div class="step"><div class="step-num">1</div>Välj HTML-fil</div>
-  <div class="step"><div class="step-num">2</div>Namnge spelet</div>
-  <div class="step"><div class="step-num">3</div>Ange lösenord</div>
-  <div class="step"><div class="step-num">4</div>Ladda upp!</div>
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('game')" id="tabGame">🎮 Ladda upp spel</button>
+  <button class="tab"        onclick="switchTab('link')" id="tabLink">🔗 Lägg till länk</button>
 </div>
 
-<div class="card" id="uploadCard">
+<!-- PANEL: GAME UPLOAD -->
+<div class="panel active" id="panelGame">
+<div class="card">
   <div>
     <label>DITT SPEL (.HTML-FIL)</label>
     <div id="dropZone" onclick="document.getElementById('fileInput').click()">
@@ -110,8 +127,8 @@ input[type=file]{display:none;}
     <input type="text" id="gameName" placeholder="T.ex. Mitt rymdeventyr" maxlength="40">
   </div>
   <div>
-    <label>VÄLJ EMOJI FÖR DITT SPEL</label>
-    <div class="emoji-row" id="emojiRow"></div>
+    <label>VÄLJ EMOJI</label>
+    <div class="emoji-row" id="emojiRowGame"></div>
   </div>
   <div>
     <label>KORT BESKRIVNING (valfritt)</label>
@@ -120,31 +137,78 @@ input[type=file]{display:none;}
   <div>
     <label>LÄGG I KATEGORI</label>
     <select id="gameCategory">
-      <optgroup label="Touchskarm">
-        <option value="touch_deltagarspel">Deltagarspel (Touch)</option>
-        <option value="touch_sallskap">Sallskapsspel (Touch)</option>
-        <option value="touch_boll">Boll &amp; Racketsport (Touch)</option>
-        <option value="touch_hjarna">Harngympa (Touch)</option>
-        <option value="touch_strategi">Strategispel (Touch)</option>
-        <option value="touch_webb">Webb &amp; Aktiviteter (Touch)</option>
+      <optgroup label="📱 Touchskärm">
+        <option value="touch_deltagarspel">⭐ Deltagarspel (Touch)</option>
+        <option value="touch_sallskap">🎲 Sällskapsspel (Touch)</option>
+        <option value="touch_boll">🏓 Boll &amp; Racketsport (Touch)</option>
+        <option value="touch_hjarna">🧠 Hjärngympa (Touch)</option>
+        <option value="touch_strategi">♟️ Strategispel (Touch)</option>
+        <option value="touch_webb">🌐 Webb &amp; Aktiviteter (Touch)</option>
       </optgroup>
-      <optgroup label="MakeyMakey">
-        <option value="makey_deltagarspel">Deltagarspel (Makey)</option>
-        <option value="makey_pilar">Piltangenter (Makey)</option>
-        <option value="makey_mellanslag">Mellanslag &amp; Enter (Makey)</option>
-        <option value="makey_action">Kombination (Makey)</option>
-        <option value="makey_sonar">Sonar (Makey)</option>
-        <option value="makey_webb">Webb &amp; Aktiviteter (Makey)</option>
+      <optgroup label="🕹️ MakeyMakey">
+        <option value="makey_deltagarspel">⭐ Deltagarspel (Makey)</option>
+        <option value="makey_pilar">⬆️ Piltangenter (Makey)</option>
+        <option value="makey_mellanslag">⎵ Mellanslag &amp; Enter (Makey)</option>
+        <option value="makey_action">🎮 Kombination (Makey)</option>
+        <option value="makey_sonar">📡 Sonar (Makey)</option>
+        <option value="makey_webb">🌐 Webb &amp; Aktiviteter (Makey)</option>
       </optgroup>
     </select>
   </div>
   <div>
     <label>LÖSENORD</label>
-    <input type="password" id="pwdInput" placeholder="Ange lösenordet" maxlength="30">
+    <input type="password" id="pwdGame" placeholder="Ange lösenordet" maxlength="30">
   </div>
-  <button class="submit-btn" id="submitBtn" type="button" onclick="upload()" disabled>
+  <button class="submit-btn" id="submitGame" type="button" onclick="uploadGame()" disabled>
     Ladda upp spelet
   </button>
+</div>
+</div>
+
+<!-- PANEL: LINK -->
+<div class="panel" id="panelLink">
+<div class="card">
+  <div>
+    <label>WEBBADRESS (URL)</label>
+    <input type="url" id="linkUrl" placeholder="https://www.jigsawplanet.com" oninput="checkLinkReady();previewUrl()">
+    <div id="urlPreview" style="margin-top:8px;"></div>
+  </div>
+  <div>
+    <label>NAMN PÅ LÄNKEN</label>
+    <input type="text" id="linkName" placeholder="T.ex. Jigsawplanet" maxlength="40" oninput="checkLinkReady()">
+  </div>
+  <div>
+    <label>VÄLJ EMOJI</label>
+    <div class="emoji-row" id="emojiRowLink"></div>
+  </div>
+  <div>
+    <label>KORT BESKRIVNING (valfritt)</label>
+    <input type="text" id="linkDesc" placeholder="T.ex. Skapa och lös pussel online" maxlength="60">
+  </div>
+  <div>
+    <label>LÄGG I KATEGORI</label>
+    <select id="linkCategory">
+      <optgroup label="📱 Touchskärm">
+        <option value="touch_webb" selected>🌐 Webb &amp; Aktiviteter (Touch)</option>
+        <option value="touch_deltagarspel">⭐ Deltagarspel (Touch)</option>
+        <option value="touch_sallskap">🎲 Sällskapsspel (Touch)</option>
+        <option value="touch_hjarna">🧠 Hjärngympa (Touch)</option>
+      </optgroup>
+      <optgroup label="🕹️ MakeyMakey">
+        <option value="makey_webb">🌐 Webb &amp; Aktiviteter (Makey)</option>
+        <option value="makey_deltagarspel">⭐ Deltagarspel (Makey)</option>
+        <option value="makey_sonar">📡 Sonar (Makey)</option>
+      </optgroup>
+    </select>
+  </div>
+  <div>
+    <label>LÖSENORD</label>
+    <input type="password" id="pwdLink" placeholder="Ange lösenordet" maxlength="30" oninput="checkLinkReady()">
+  </div>
+  <button class="submit-btn" id="submitLink" type="button" onclick="uploadLink()" disabled>
+    Lägg till länken
+  </button>
+</div>
 </div>
 
 <div id="progressWrap"><div id="progressBar"></div></div>
@@ -152,11 +216,11 @@ input[type=file]{display:none;}
 
 <div id="successScreen">
   <div class="success-icon">&#127881;</div>
-  <div class="success-title">Spelet är uppe!</div>
+  <div class="success-title" id="successTitle">Klart!</div>
   <div style="font-size:15px;color:#888;" id="successMsg"></div>
   <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
     <button class="btn-small btn-green" onclick="location.href='index.html'">Till Spelrummet</button>
-    <button class="btn-small btn-gray"  onclick="resetForm()">Ladda upp ett till</button>
+    <button class="btn-small btn-gray"  onclick="resetForm()">Lägg till mer</button>
   </div>
 </div>
 
@@ -175,30 +239,43 @@ function checkPwd(pwd){
 }
 
 var EMOJIS = ['🎮','🕹️','🎲','🃏','🀄','♟️','🎯','🏆','🎪','🎭','⚽','🏀','🎾','🏓','🏸','🥊','🏊','🏎️','🚴','🛹','🎵','🎶','🎸','🎹','🎺','🥁','🎷','🎙️','📡','🔊','🦁','🐉','🦊','🐸','🦋','🌈','🌊','🌋','🌟','⭐','🍕','🍔','🍎','🍓','🍦','🧁','🍩','🥐','🍜','🧃','🚀','🛸','🤖','👾','💎','🔮','⚡','🔥','💥','🌀','🎨','✏️','📚','🔑','🧪','🔭','🧲','🎁','🛒','🚗','😎','🤩','👻','🎉','❤️','🌸','🌻','🍀','🦄','🧸'];
-var selectedEmoji = '🎮';
-var selectedFile  = null;
-var fileContent   = '';
 
-function buildEmojiPicker(){
-  var row = document.getElementById('emojiRow');
+var selectedEmojiGame = '🎮';
+var selectedEmojiLink = '🌐';
+var selectedFile = null;
+var fileContent  = '';
+var currentTab   = 'game';
+
+function buildEmojiPicker(rowId, getSelected, setSelected){
+  var row = document.getElementById(rowId);
+  row.innerHTML = '';
   EMOJIS.forEach(function(e){
     var btn = document.createElement('button');
-    btn.className = 'emoji-btn' + (e === selectedEmoji ? ' selected' : '');
+    btn.className = 'emoji-btn' + (e === getSelected() ? ' selected' : '');
     btn.textContent = e;
     btn.type = 'button';
     btn.onclick = function(){
-      selectedEmoji = e;
-      document.querySelectorAll('.emoji-btn').forEach(function(b){ b.classList.remove('selected'); });
+      setSelected(e);
+      row.querySelectorAll('.emoji-btn').forEach(function(b){ b.classList.remove('selected'); });
       btn.classList.add('selected');
     };
     row.appendChild(btn);
   });
 }
 
+function switchTab(tab){
+  currentTab = tab;
+  document.getElementById('panelGame').classList.toggle('active', tab==='game');
+  document.getElementById('panelLink').classList.toggle('active', tab==='link');
+  document.getElementById('tabGame').classList.toggle('active', tab==='game');
+  document.getElementById('tabLink').classList.toggle('active', tab==='link');
+  document.getElementById('status').style.display = 'none';
+}
+
+/* ── File upload ── */
 document.getElementById('fileInput').addEventListener('change', function(e){
   handleFile(e.target.files[0]);
 });
-
 var dz = document.getElementById('dropZone');
 dz.addEventListener('dragover',  function(e){ e.preventDefault(); dz.classList.add('over'); });
 dz.addEventListener('dragleave', function(){ dz.classList.remove('over'); });
@@ -209,122 +286,157 @@ dz.addEventListener('drop', function(e){
 
 function handleFile(file){
   if(!file) return;
-  if(!file.name.match(/\.html?$/i)){
-    showStatus('err', 'Filen måste vara en .html-fil!');
-    return;
-  }
-  if(file.size > 5 * 1024 * 1024){
-    showStatus('err', 'Filen är för stor (max 5MB)');
-    return;
-  }
+  if(!file.name.match(/\.html?$/i)){ showStatus('err','Filen måste vara en .html-fil!'); return; }
+  if(file.size > 5*1024*1024){ showStatus('err','Filen är för stor (max 5MB)'); return; }
   selectedFile = file;
   var reader = new FileReader();
   reader.onload = function(ev){
     fileContent = ev.target.result;
     dz.classList.add('has-file');
     document.getElementById('dzText').innerHTML =
-      '<div class="dz-file">Vald: ' + file.name + '</div>' +
-      '<div style="font-size:12px;color:#555;margin-top:4px;">' +
-      Math.round(file.size/1024) + 'KB - Klar!</div>';
+      '<div class="dz-file">Vald: '+file.name+'</div>'+
+      '<div style="font-size:12px;color:#555;margin-top:4px;">'+Math.round(file.size/1024)+'KB - Klar!</div>';
     var nameEl = document.getElementById('gameName');
-    if(!nameEl.value){
-      nameEl.value = file.name.replace(/\.html?$/i,'').replace(/[-_]/g,' ');
-    }
-    checkReady();
+    if(!nameEl.value) nameEl.value = file.name.replace(/\.html?$/i,'').replace(/[-_]/g,' ');
+    checkGameReady();
   };
-  reader.readAsText(file, 'utf-8');
+  reader.readAsText(file,'utf-8');
 }
 
-document.getElementById('gameName').addEventListener('input', checkReady);
-document.getElementById('pwdInput').addEventListener('input', checkReady);
+document.getElementById('gameName').addEventListener('input', checkGameReady);
+document.getElementById('pwdGame').addEventListener('input',  checkGameReady);
 
-function checkReady(){
-  var ok = (selectedFile !== null) &&
-           (document.getElementById('gameName').value.trim().length > 1) &&
-           (document.getElementById('pwdInput').value.length > 2);
-  document.getElementById('submitBtn').disabled = !ok;
+function checkGameReady(){
+  var ok = selectedFile !== null &&
+           document.getElementById('gameName').value.trim().length > 1 &&
+           document.getElementById('pwdGame').value.length > 2;
+  document.getElementById('submitGame').disabled = !ok;
 }
 
-function upload(){
-  var name = document.getElementById('gameName').value.trim();
-  var desc = document.getElementById('gameDesc').value.trim() || name;
-  var pwd  = document.getElementById('pwdInput').value;
-  var catVal = document.getElementById('gameCategory').value;
+/* ── Link ── */
+function previewUrl(){
+  var url = document.getElementById('linkUrl').value.trim();
+  var prev = document.getElementById('urlPreview');
+  if(url.startsWith('http')){
+    prev.style.display = 'block';
+    prev.textContent = '🔗 ' + url;
+  } else {
+    prev.style.display = 'none';
+  }
+}
+
+function checkLinkReady(){
+  var url  = document.getElementById('linkUrl').value.trim();
+  var name = document.getElementById('linkName').value.trim();
+  var pwd  = document.getElementById('pwdLink').value;
+  var ok = url.startsWith('http') && name.length > 1 && pwd.length > 2;
+  document.getElementById('submitLink').disabled = !ok;
+}
+
+/* ── Parse category ── */
+function parseCat(catVal){
   var parts  = catVal.split('_');
   var hub    = parts[0];
   var cat    = parts.slice(1).join('_') || 'deltagarspel';
   var folder = hub==='touch' ? 'deltagarspel_touch' : 'deltagarspel_makey';
+  return {hub:hub, cat:cat, folder:folder};
+}
 
-  if(!checkPwd(pwd)){
-    showStatus('err', 'Fel lösenord! Försök igen.');
-    document.getElementById('pwdInput').value = '';
-    document.getElementById('pwdInput').focus();
-    return;
-  }
+/* ── GitHub PUT ── */
+function githubPut(path, content_b64, message, token){
+  return fetch('https://api.github.com/repos/'+REPO+'/contents/'+path,{
+    method:'PUT',
+    headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
+    body:JSON.stringify({message:message, content:content_b64, branch:BRANCH})
+  }).then(function(res){
+    if(!res.ok) return res.json().then(function(e){ throw new Error(e.message||('Status '+res.status)); });
+    return res.json();
+  });
+}
 
-  var token = decodeToken(pwd);
-  var safeName = name.toLowerCase()
-    .replace(/[åä]/g,'a').replace(/ö/g,'o')
-    .replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,40);
+function showProgress(pct){ document.getElementById('progressBar').style.width = pct+'%'; }
+function showProgressWrap(show){ document.getElementById('progressWrap').style.display = show?'block':'none'; }
+
+/* ── Upload game ── */
+function uploadGame(){
+  var name = document.getElementById('gameName').value.trim();
+  var desc = document.getElementById('gameDesc').value.trim() || name;
+  var pwd  = document.getElementById('pwdGame').value;
+  var pc   = parseCat(document.getElementById('gameCategory').value);
+
+  if(!checkPwd(pwd)){ showStatus('err','Fel lösenord!'); document.getElementById('pwdGame').value=''; return; }
+  var token    = decodeToken(pwd);
+  var safeName = name.toLowerCase().replace(/[åä]/g,'a').replace(/ö/g,'o').replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,40);
   var ts       = Date.now();
-  var filename = safeName + '_' + ts + '.html';
+  var filename = safeName+'_'+ts+'.html';
 
-  var path     = folder + '/' + filename;
-  var apiURL   = 'https://api.github.com/repos/' + REPO + '/contents/' + path;
-
-  showStatus('info', 'Laddar upp...');
-  document.getElementById('progressWrap').style.display = 'block';
-  document.getElementById('progressBar').style.width    = '25%';
-  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('submitGame').disabled = true;
+  showProgressWrap(true); showProgress(20);
+  showStatus('info','Laddar upp spel...');
 
   var b64 = btoa(unescape(encodeURIComponent(fileContent)));
-  document.getElementById('progressBar').style.width = '50%';
+  showProgress(45);
 
-  fetch(apiURL, {
-    method: 'PUT',
-    headers: {
-      'Authorization': 'token ' + token,
-      'Content-Type':  'application/json',
-      'Accept':        'application/vnd.github.v3+json'
-    },
-    body: JSON.stringify({ message: 'Nytt spel: ' + name, content: b64, branch: BRANCH })
-  })
-  .then(function(res){
-    document.getElementById('progressBar').style.width = '75%';
-    if(!res.ok) return res.json().then(function(e){ throw new Error(e.message || ('Status ' + res.status)); });
-    return res.json();
+  githubPut(pc.folder+'/'+filename, b64, 'Nytt spel: '+name, token)
+  .then(function(){
+    showProgress(70);
+    var meta = {name:name,emoji:selectedEmojiGame,desc:desc,file:filename,cat:pc.cat,uploaded:new Date().toISOString()};
+    var mb64 = btoa(unescape(encodeURIComponent(JSON.stringify(meta))));
+    return githubPut(pc.folder+'/meta_'+safeName+'_'+ts+'.json', mb64, 'Meta: '+name, token);
   })
   .then(function(){
-    var meta     = { name:name, emoji:selectedEmoji, desc:desc, file:filename, cat:cat, uploaded:new Date().toISOString() };
-    var metaPath = folder + '/meta_' + safeName + '_' + ts + '.json';
-    return fetch('https://api.github.com/repos/' + REPO + '/contents/' + metaPath, {
-      method: 'PUT',
-      headers: {
-        'Authorization': 'token ' + token,
-        'Content-Type':  'application/json',
-        'Accept':        'application/vnd.github.v3+json'
-      },
-      body: JSON.stringify({ message: 'Meta: ' + name,
-        content: btoa(unescape(encodeURIComponent(JSON.stringify(meta)))), branch: BRANCH })
-    });
-  })
-  .then(function(){
-    document.getElementById('progressBar').style.width = '100%';
-    setTimeout(function(){ document.getElementById('progressWrap').style.display = 'none'; }, 500);
-    document.getElementById('uploadCard').style.display  = 'none';
-    document.getElementById('status').style.display      = 'none';
-    document.getElementById('successScreen').style.display = 'flex';
-    document.getElementById('successMsg').textContent =
-      selectedEmoji + ' "' + name + '" lades till i ' +
-      (hub === 'touch' ? 'Touchskärm' : 'MakeyMakey') + ' - ' + cat + '!';
+    showProgress(100);
+    setTimeout(function(){ showProgressWrap(false); },500);
+    showSuccess('🎮',name, (pc.hub==='touch'?'Touchskärm':'MakeyMakey')+' – '+pc.cat);
   })
   .catch(function(e){
-    document.getElementById('progressWrap').style.display = 'none';
-    document.getElementById('progressBar').style.width    = '0%';
-    document.getElementById('submitBtn').disabled = false;
-    showStatus('err', 'Uppladdning misslyckades: ' + e.message);
-    console.error(e);
+    showProgressWrap(false); showProgress(0);
+    document.getElementById('submitGame').disabled = false;
+    showStatus('err','Uppladdning misslyckades: '+e.message);
   });
+}
+
+/* ── Upload link ── */
+function uploadLink(){
+  var url  = document.getElementById('linkUrl').value.trim();
+  var name = document.getElementById('linkName').value.trim();
+  var desc = document.getElementById('linkDesc').value.trim() || name;
+  var pwd  = document.getElementById('pwdLink').value;
+  var pc   = parseCat(document.getElementById('linkCategory').value);
+
+  if(!checkPwd(pwd)){ showStatus('err','Fel lösenord!'); document.getElementById('pwdLink').value=''; return; }
+  var token    = decodeToken(pwd);
+  var safeName = name.toLowerCase().replace(/[åä]/g,'a').replace(/ö/g,'o').replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,40);
+  var ts       = Date.now();
+
+  document.getElementById('submitLink').disabled = true;
+  showProgressWrap(true); showProgress(30);
+  showStatus('info','Lägger till länk...');
+
+  // For links: store a meta file only (no HTML file), with url field
+  var meta = {name:name, emoji:selectedEmojiLink, desc:desc, url:url, cat:pc.cat, type:'link', uploaded:new Date().toISOString()};
+  var mb64 = btoa(unescape(encodeURIComponent(JSON.stringify(meta))));
+
+  githubPut(pc.folder+'/meta_'+safeName+'_'+ts+'.json', mb64, 'Ny länk: '+name, token)
+  .then(function(){
+    showProgress(100);
+    setTimeout(function(){ showProgressWrap(false); },500);
+    showSuccess('🔗',name, (pc.hub==='touch'?'Touchskärm':'MakeyMakey')+' – '+pc.cat);
+  })
+  .catch(function(e){
+    showProgressWrap(false); showProgress(0);
+    document.getElementById('submitLink').disabled = false;
+    showStatus('err','Misslyckades: '+e.message);
+  });
+}
+
+function showSuccess(icon, name, where){
+  document.querySelectorAll('.panel,.card').forEach(function(el){ el.style.display='none'; });
+  document.querySelector('.tabs').style.display = 'none';
+  document.getElementById('status').style.display = 'none';
+  document.getElementById('successTitle').textContent = 'Klart! '+icon;
+  document.getElementById('successMsg').textContent = '"'+name+'" lades till i '+where+'!';
+  document.getElementById('successScreen').style.display = 'flex';
 }
 
 function showStatus(type, msg){
@@ -334,46 +446,46 @@ function showStatus(type, msg){
 
 function resetForm(){
   selectedFile = null; fileContent = '';
-  document.getElementById('uploadCard').style.display      = 'flex';
-  document.getElementById('successScreen').style.display   = 'none';
+  document.querySelectorAll('.panel').forEach(function(el){ el.style.display=''; });
+  document.querySelector('.tabs').style.display = 'flex';
+  document.getElementById('successScreen').style.display = 'none';
   document.getElementById('fileInput').value  = '';
   document.getElementById('gameName').value   = '';
   document.getElementById('gameDesc').value   = '';
-  document.getElementById('pwdInput').value   = '';
+  document.getElementById('pwdGame').value    = '';
+  document.getElementById('linkUrl').value    = '';
+  document.getElementById('linkName').value   = '';
+  document.getElementById('linkDesc').value   = '';
+  document.getElementById('pwdLink').value    = '';
+  document.getElementById('urlPreview').style.display = 'none';
   dz.classList.remove('has-file');
   document.getElementById('dzText').innerHTML =
-    'Tryck här för att välja din HTML-fil<br>' +
+    'Tryck här för att välja din HTML-fil<br>'+
     '<span style="font-size:12px;color:#444;">eller dra och släpp filen här</span>';
-  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('submitGame').disabled = true;
+  document.getElementById('submitLink').disabled = true;
   document.getElementById('status').style.display = 'none';
+  switchTab('game');
 }
 
-buildEmojiPicker();
+// Build emoji pickers
+buildEmojiPicker('emojiRowGame', function(){ return selectedEmojiGame; }, function(e){ selectedEmojiGame=e; });
+buildEmojiPicker('emojiRowLink', function(){ return selectedEmojiLink; }, function(e){ selectedEmojiLink=e; });
 
 // Pre-select category from URL param
 (function(){
-  const params = new URLSearchParams(window.location.search);
-  const cat = params.get('cat');
+  var params = new URLSearchParams(window.location.search);
+  var cat = params.get('cat');
+  var hub = params.get('hub') || 'touch';
   if(cat){
-    const sel = document.getElementById('gameCategory');
-    if(cat==='makey') sel.value='makey';
-    else sel.value='touch';
+    var val = hub+'_'+cat;
+    var gSel = document.getElementById('gameCategory');
+    var lSel = document.getElementById('linkCategory');
+    for(var i=0;i<gSel.options.length;i++) if(gSel.options[i].value===val){ gSel.selectedIndex=i; break; }
+    for(var i=0;i<lSel.options.length;i++) if(lSel.options[i].value===val){ lSel.selectedIndex=i; break; }
   }
-})();
-
-// Pre-select category from URL param (e.g. ?cat=hjarna)
-(function(){
-  const params = new URLSearchParams(window.location.search);
-  const cat = params.get('cat');
-  if(cat){
-    const sel = document.getElementById('gameCategory');
-    // Map hub category id to upload select value
-    const map = {
-      'sallskap':'touch','boll':'touch','hjarna':'touch',
-      'strategi':'touch','webb':'touch','deltagarspel':'touch'
-    };
-    sel.value = map[cat] || 'touch';
-  }
+  // If coming from link tab
+  if(params.get('tab')==='link') switchTab('link');
 })();
 </script>
 </body>

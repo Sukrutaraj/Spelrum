@@ -414,6 +414,12 @@ async function fetchDeltagar(folder){
         var meta=await mr.json();
         var gid=mf.name.replace('.json','');
         if(GAMES.find(function(g){return g.id===gid;})) continue;
+        if(meta.url){
+          GAMES.push({id:gid,name:meta.name,emoji:meta.emoji||'🔗',
+            desc:meta.desc||meta.name,category:meta.cat||'deltagarspel',
+            cat:meta.cat||'deltagarspel',url:meta.url,file:'',isNew:true});
+          continue;
+        }
         var htmlFile=files.find(function(f){return f.name===meta.file;});
         if(!htmlFile) continue;
         var hr=await fetch(BASE+folder+'/'+meta.file);
@@ -421,7 +427,7 @@ async function fetchDeltagar(folder){
         var htmlContent=await hr.text();
         GAME_B64[gid]=btoa(unescape(encodeURIComponent(htmlContent)));
         GAMES.push({id:gid,name:meta.name,emoji:meta.emoji||'🎮',desc:meta.desc||meta.name,
-          category:'deltagarspel',cat:meta.cat||'makey',file:meta.file||'',isNew:true});
+          category:meta.cat||'deltagarspel',cat:meta.cat||'deltagarspel',url:'',file:meta.file||'',isNew:true});
       }catch(e){console.warn('Spel ej laddat:',mf.name,e);}
     }
     if(currentCat&&currentCat.id==='deltagarspel') showGames(currentCat);
