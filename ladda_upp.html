@@ -120,8 +120,22 @@ input[type=file]{display:none;}
   <div>
     <label>LÄGG I KATEGORI</label>
     <select id="gameCategory">
-      <option value="touch">Touchskärm - Deltagarspel</option>
-      <option value="makey">MakeyMakey - Deltagarspel</option>
+      <optgroup label="Touchskarm">
+        <option value="touch_deltagarspel">Deltagarspel (Touch)</option>
+        <option value="touch_sallskap">Sallskapsspel (Touch)</option>
+        <option value="touch_boll">Boll &amp; Racketsport (Touch)</option>
+        <option value="touch_hjarna">Harngympa (Touch)</option>
+        <option value="touch_strategi">Strategispel (Touch)</option>
+        <option value="touch_webb">Webb &amp; Aktiviteter (Touch)</option>
+      </optgroup>
+      <optgroup label="MakeyMakey">
+        <option value="makey_deltagarspel">Deltagarspel (Makey)</option>
+        <option value="makey_pilar">Piltangenter (Makey)</option>
+        <option value="makey_mellanslag">Mellanslag &amp; Enter (Makey)</option>
+        <option value="makey_action">Kombination (Makey)</option>
+        <option value="makey_sonar">Sonar (Makey)</option>
+        <option value="makey_webb">Webb &amp; Aktiviteter (Makey)</option>
+      </optgroup>
     </select>
   </div>
   <div>
@@ -160,7 +174,7 @@ function checkPwd(pwd){
   return h === PWD_HASH;
 }
 
-var EMOJIS = ['🎮','🚀','🎯','⚡','🌟','🧩','🎲','🏆','🎪','🎨','🦁','🐉','🤖','👾','🌈','🔥','💎','🎵','🏎️','⚽'];
+var EMOJIS = ['🎮','🕹️','🎲','🃏','🀄','♟️','🎯','🏆','🎪','🎭','⚽','🏀','🎾','🏓','🏸','🥊','🏊','🏎️','🚴','🛹','🎵','🎶','🎸','🎹','🎺','🥁','🎷','🎙️','📡','🔊','🦁','🐉','🦊','🐸','🦋','🌈','🌊','🌋','🌟','⭐','🍕','🍔','🍎','🍓','🍦','🧁','🍩','🥐','🍜','🧃','🚀','🛸','🤖','👾','💎','🔮','⚡','🔥','💥','🌀','🎨','✏️','📚','🔑','🧪','🔭','🧲','🎁','🛒','🚗','😎','🤩','👻','🎉','❤️','🌸','🌻','🍀','🦄','🧸'];
 var selectedEmoji = '🎮';
 var selectedFile  = null;
 var fileContent   = '';
@@ -235,7 +249,11 @@ function upload(){
   var name = document.getElementById('gameName').value.trim();
   var desc = document.getElementById('gameDesc').value.trim() || name;
   var pwd  = document.getElementById('pwdInput').value;
-  var cat  = document.getElementById('gameCategory').value;
+  var catVal = document.getElementById('gameCategory').value;
+  var parts  = catVal.split('_');
+  var hub    = parts[0];
+  var cat    = parts.slice(1).join('_') || 'deltagarspel';
+  var folder = hub==='touch' ? 'deltagarspel_touch' : 'deltagarspel_makey';
 
   if(!checkPwd(pwd)){
     showStatus('err', 'Fel lösenord! Försök igen.');
@@ -250,7 +268,7 @@ function upload(){
     .replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,40);
   var ts       = Date.now();
   var filename = safeName + '_' + ts + '.html';
-  var folder   = (cat === 'touch') ? 'deltagarspel_touch' : 'deltagarspel_makey';
+
   var path     = folder + '/' + filename;
   var apiURL   = 'https://api.github.com/repos/' + REPO + '/contents/' + path;
 
@@ -298,7 +316,7 @@ function upload(){
     document.getElementById('successScreen').style.display = 'flex';
     document.getElementById('successMsg').textContent =
       selectedEmoji + ' "' + name + '" lades till i ' +
-      (cat === 'touch' ? 'Touchskärm' : 'MakeyMakey') + '-spelrummet!';
+      (hub === 'touch' ? 'Touchskärm' : 'MakeyMakey') + ' - ' + cat + '!';
   })
   .catch(function(e){
     document.getElementById('progressWrap').style.display = 'none';

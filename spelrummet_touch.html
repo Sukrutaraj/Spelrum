@@ -346,12 +346,17 @@ async function fetchDeltagar(folder){
         const htmlContent = await hr.text();
 
         GAME_B64[gid] = btoa(unescape(encodeURIComponent(htmlContent)));
+        // Use meta.cat to place in correct category
+        var gameCat = meta.cat || 'deltagarspel';
+        // Valid touch categories
+        var validCats = ['sallskap','boll','hjarna','strategi','webb','deltagarspel'];
+        if(!validCats.includes(gameCat)) gameCat = 'deltagarspel';
         GAMES.push({
           id:gid, name:meta.name,
           emoji:meta.emoji||'🎮',
           desc:meta.desc||meta.name,
-          category:'deltagarspel',
-          cat:meta.cat||'touch',
+          category:gameCat,
+          cat:gameCat,
           file:meta.file||'',
           isNew:true
         });
