@@ -76,10 +76,18 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
   -webkit-tap-highlight-color:transparent;
 }
 #homeBtn:hover{background:rgba(255,255,255,0.2);}
+
+#staffBtn{position:fixed;top:10px;right:10px;z-index:200;font-size:13px;font-weight:700;
+  border:none;border-radius:8px;background:rgba(255,255,255,0.08);
+  color:rgba(255,255,255,0.5);padding:6px 12px;cursor:pointer;
+  transition:all .15s;-webkit-tap-highlight-color:transparent;}
+#staffBtn.active{background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);}
+#staffBtn:hover{background:rgba(255,255,255,0.15);}
 </style>
 </head>
 <body>
 <a id="homeBtn" href="index.html">🏠 Spelrummet</a>
+<button id="staffBtn" onclick="toggleStaff()">🔑 Personal</button>
 
 <div id="bg">
   <div class="orb" style="width:600px;height:600px;background:#7c3aed;top:-150px;left:-150px;animation-duration:17s;"></div>
@@ -201,7 +209,7 @@ function buildCats(){
   const list = document.getElementById('catList');
   list.innerHTML = '';
   CATEGORIES.forEach(cat=>{
-    const games = GAMES.filter(g=>g.category===cat.id);
+    const games = GAMES.filter(g=>g.category===cat.id && !hiddenGames.has(g.id));
     if(games.length===0 && cat.id!=='deltagarspel') return;
     const btn = document.createElement('div');
     btn.className = 'cat-btn';
@@ -236,7 +244,7 @@ function showGames(cat){
       '<div class="card-emoji">'+g.emoji+'</div>'+
       '<div class="card-name" style="color:'+cat.color+'">'+g.name+'</div>'+
       '<div class="card-desc">'+g.desc+'</div>'+
-      (isDeltagar ? '<button class="card-del" title="Ta bort">🗑</button>' : '');
+      (staffMode ? '<button class="card-del" title="Ta bort">🗑</button>' : '');
     card.addEventListener('click', e=>{
       if(e.target.classList.contains('card-del')) return;
       openGame(g);
@@ -245,14 +253,19 @@ function showGames(cat){
       if(e.target.classList.contains('card-del')) return;
       e.preventDefault(); openGame(g);
     });
-    if(isDeltagar){
-      const delBtn = card.querySelector('.card-del');
-      if(delBtn){
-        delBtn.addEventListener('pointerdown', e=>{
-          e.stopPropagation(); e.preventDefault();
-          deleteGame(g.id, folder, g.file || '');
-        });
-      }
+    const delBtn = card.querySelector('.card-del');
+    if(delBtn){
+      delBtn.addEventListener('pointerdown', e=>{
+        e.stopPropagation(); e.preventDefault();
+        if(isDeltagar){
+          deleteGame(g.id, folder, g.file||'');
+        } else {
+          if(confirm('Dölj "'+g.name+'" från listan? (Syns igen vid omladdning)')){
+            hiddenGames.add(g.id);
+            showGames(currentCat);
+          }
+        }
+      });
     }
     grid.appendChild(card);
   });
@@ -495,6 +508,31 @@ function submitUploadModal(){
   var inp = document.getElementById('modalPwd');
   if(inp) inp.addEventListener('keydown',function(e){if(e.key==='Enter')submitUploadModal();});
 })();
+
+
+/* ── Staff mode ── */
+var staffMode   = false;
+var hiddenGames = new Set();
+var STAFF_HASH  = '705';
+
+function toggleStaff(){
+  if(staffMode){
+    staffMode = false;
+    document.getElementById('staffBtn').textContent = '🔑 Personal';
+    document.getElementById('staffBtn').classList.remove('active');
+    if(currentCat) showGames(currentCat);
+    return;
+  }
+  var pwd = prompt('Lösenord för personal:');
+  if(!pwd) return;
+  var h = String(pwd.split('').reduce(function(a,ch){return a+ch.charCodeAt(0);},0));
+  if(h !== STAFF_HASH){ alert('Fel lösenord!'); return; }
+  staffMode = true;
+  document.getElementById('staffBtn').textContent = '🔒 Logga ut';
+  document.getElementById('staffBtn').classList.add('active');
+  alert('Personal-läge aktiverat. Nu syns 🗑️ på alla spelkort.');
+  if(currentCat) showGames(currentCat);
+}
 
 </script>
 <!-- ── Upload modal ── -->
