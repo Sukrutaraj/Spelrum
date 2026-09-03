@@ -49,6 +49,45 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
   transition:all .15s;-webkit-tap-highlight-color:transparent;}
 #staffBtn.active{background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);}
 #staffBtn:hover{background:rgba(255,255,255,0.15);}
+
+/* ── Touch controls ── */
+#touchToggle{
+  position:fixed;bottom:16px;right:16px;z-index:999999;
+  display:none;
+  border:none;border-radius:14px;padding:12px 18px;
+  font-size:16px;font-weight:700;
+  background:rgba(34,197,94,0.18);
+  border:1px solid rgba(34,197,94,0.35);
+  color:#86efac;cursor:pointer;
+  backdrop-filter:blur(8px);
+  box-shadow:0 6px 24px rgba(0,0,0,0.4);
+  -webkit-tap-highlight-color:transparent;
+}
+#touchControls{
+  position:fixed;left:40px;top:40px;z-index:999999;
+  display:none;flex-direction:column;align-items:center;gap:10px;
+  padding:10px;border-radius:24px;
+  background:rgba(0,0,0,0.5);backdrop-filter:blur(10px);
+  touch-action:none;user-select:none;-webkit-user-select:none;
+}
+#touchDragHandle{
+  width:100%;padding:10px 14px;border-radius:12px;
+  background:rgba(255,255,255,0.08);color:#86efac;
+  font-size:14px;text-align:center;letter-spacing:1px;
+  cursor:grab;touch-action:none;
+}
+.touch-row{display:flex;gap:10px;}
+.touch-btn{
+  width:82px;height:82px;border:none;border-radius:22px;
+  font-size:34px;
+  background:rgba(20,20,20,0.92);color:#86efac;
+  border:2px solid rgba(34,197,94,0.4);
+  box-shadow:0 0 18px rgba(34,197,94,0.22);
+  touch-action:manipulation;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.touch-btn:active{transform:scale(0.94);background:rgba(34,197,94,0.3);}
+.space-btn{width:174px;font-size:18px;}
 </style>
 </head>
 <body>
@@ -289,11 +328,15 @@ function openGame(g){
   document.getElementById('gameBarTitle').textContent = g.emoji+' '+g.name;
   document.getElementById('gameFrame').src = currentBlob;
   setView('viewGame');
+  document.getElementById('touchToggle').style.display='block';
 }
 
 function closeGame(){
   document.getElementById('gameFrame').src='about:blank';
   if(currentBlob){URL.revokeObjectURL(currentBlob);currentBlob=null;}
+  document.getElementById('touchToggle').style.display='none';
+  document.getElementById('touchControls').style.display='none';
+  controlsVisible=false;
   setView('viewGames');
 }
 
@@ -467,6 +510,77 @@ function toggleStaff(){
 
 buildCats();
 fetchDeltagar('deltagarspel_makey');
+
+/* ── Touch controls JS ── */
+var controlsVisible = false;
+
+function toggleTouch(){
+  controlsVisible = !controlsVisible;
+  document.getElementById('touchControls').style.display = controlsVisible ? 'flex' : 'none';
+}
+
+function fireKey(key){
+  var eventData = {key:key, code:key===' '?'Space':('Arrow'+key.replace('Arrow','')), bubbles:true, cancelable:true};
+  document.dispatchEvent(new KeyboardEvent('keydown', eventData));
+  var iframe = document.getElementById('gameFrame');
+  try{
+    if(iframe && iframe.contentWindow){
+      iframe.contentWindow.dispatchEvent(new KeyboardEvent('keydown', eventData));
+      if(iframe.contentWindow.document)
+        iframe.contentWindow.document.dispatchEvent(new KeyboardEvent('keydown', eventData));
+    }
+  }catch(e){}
+}
+
+document.querySelectorAll('.touch-btn').forEach(function(btn){
+  btn.addEventListener('pointerdown', function(e){
+    e.preventDefault(); e.stopPropagation();
+    fireKey(btn.dataset.key);
+    btn.style.transform='scale(0.94)';
+    setTimeout(function(){btn.style.transform='';},120);
+  },{passive:false});
+});
+
+/* Drag */
+(function(){
+  var tc = document.getElementById('touchControls');
+  var dh = document.getElementById('touchDragHandle');
+  var dragging=false, startX=0, startY=0, startL=0, startT=0;
+  dh.addEventListener('pointerdown',function(e){
+    e.preventDefault(); dragging=true;
+    var r=tc.getBoundingClientRect();
+    startL=r.left; startT=r.top; startX=e.clientX; startY=e.clientY;
+    dh.style.cursor='grabbing';
+  },{passive:false});
+  window.addEventListener('pointermove',function(e){
+    if(!dragging) return; e.preventDefault();
+    var nl=Math.max(0,Math.min(window.innerWidth-tc.offsetWidth, startL+e.clientX-startX));
+    var nt=Math.max(0,Math.min(window.innerHeight-tc.offsetHeight, startT+e.clientY-startY));
+    tc.style.left=nl+'px'; tc.style.top=nt+'px';
+  },{passive:false});
+  function stop(){ dragging=false; dh.style.cursor='grab'; }
+  window.addEventListener('pointerup',stop);
+  window.addEventListener('pointercancel',stop);
+})();
+
 </script>
+
+<button id="touchToggle" onclick="toggleTouch()">🎮 Touch</button>
+
+<div id="touchControls">
+  <div id="touchDragHandle">✋ Flytta kontroller</div>
+  <div class="touch-row">
+    <button class="touch-btn" data-key="ArrowUp">↑</button>
+  </div>
+  <div class="touch-row">
+    <button class="touch-btn" data-key="ArrowLeft">←</button>
+    <button class="touch-btn" data-key="ArrowDown">↓</button>
+    <button class="touch-btn" data-key="ArrowRight">→</button>
+  </div>
+  <div class="touch-row">
+    <button class="touch-btn space-btn" data-key=" ">SPACE</button>
+  </div>
+</div>
+
 </body>
 </html>
