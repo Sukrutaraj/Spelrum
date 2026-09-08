@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luffarschack</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: #111;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    touch-action: manipulation;
+}
+
+.game {
+    width: min(95vw, 650px);
+    padding: 15px;
+    position: relative;
+    z-index: 2;
+}
+
+h1 {
+    font-size: clamp(30px, 8vw, 55px);
+    margin: 5px 0 15px;
+}
+
+.names {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.player-box {
+    background: #222;
+    border: 2px solid #555;
+    border-radius: 12px;
+    padding: 10px;
+    flex: 1;
+    min-width: 210px;
+}
+
+.player-box label {
+    display: block;
+    margin-bottom: 7px;
+    font-weight: bold;
+}
+
+.player-box input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid #777;
+    font-size: 18px;
+    text-align: center;
+}
+
+#status {
+    font-size: clamp(20px, 5vw, 30px);
+    margin: 12px 0;
+    min-height: 38px;
+    font-weight: bold;
+}
+
+#board {
+    width: min(88vw, 450px);
+    height: min(88vw, 450px);
+    margin: 0 auto 15px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.cell {
+    background: #222;
+    border: 4px solid #555;
+    border-radius: 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: clamp(55px, 18vw, 110px);
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: transform 0.1s, background 0.15s;
+}
+
+.cell:hover {
+    background: #333;
+}
+
+.cell:active {
+    transform: scale(0.96);
+}
+
+.x {
+    color: #ff5c5c;
+}
+
+.o {
+    color: #55aaff;
+}
+
+.win {
+    background: #245d2a;
+    border-color: #72e27d;
+    animation: winnerPulse 0.6s infinite alternate;
+}
+
+@keyframes winnerPulse {
+    from {
+        transform: scale(1);
+    }
+
+    to {
+        transform: scale(1.05);
+    }
+}
+
+button {
+    font-size: 18px;
+    font-weight: bold;
+    padding: 12px 22px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    margin: 4px;
+}
+
+#restart {
+    background: white;
+    color: #111;
+}
+
+#startGame {
+    background: #ffd43b;
+    color: #111;
+}
+
+.help {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #aaa;
+    line-height: 1.5;
+}
+
+/* CONFETTI */
+
+.confetti {
+    position: fixed;
+    width: 10px;
+    height: 18px;
+    top: -30px;
+    z-index: 20;
+    pointer-events: none;
+    animation: fall linear forwards;
+}
+
+@keyframes fall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(110vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* FYRVERKERIER */
+
+.firework {
+    position: fixed;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    z-index: 19;
+    pointer-events: none;
+    animation: explode 1s ease-out forwards;
+}
+
+@keyframes explode {
+    0% {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(var(--x), var(--y)) scale(0.2);
+        opacity: 0;
+    }
+}
+
+#winnerMessage {
+    font-size: clamp(25px, 7vw, 45px);
+    font-weight: bold;
+    margin: 10px 0;
+    min-height: 50px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="game">
+
+    <h1>❌ Luffarschack ⭕</h1>
+
+    <div class="names">
+
+        <div class="player-box">
+            <label>❌ Spelare 1</label>
+            <input
+                id="player1"
+                type="text"
+                placeholder="Skriv ditt namn"
+                maxlength="20">
+        </div>
+
+        <div class="player-box">
+            <label>⭕ Spelare 2</label>
+            <input
+                id="player2"
+                type="text"
+                placeholder="Skriv ditt namn"
+                maxlength="20">
+        </div>
+
+    </div>
+
+    <button id="startGame">▶ Starta spelet</button>
+
+    <div id="status">Skriv namnen och starta spelet</div>
+
+    <div id="winnerMessage"></div>
+
+    <div id="board">
+
+        <div class="cell" data-index="0"></div>
+        <div class="cell" data-index="1"></div>
+        <div class="cell" data-index="2"></div>
+
+        <div class="cell" data-index="3"></div>
+        <div class="cell" data-index="4"></div>
+        <div class="cell" data-index="5"></div>
+
+        <div class="cell" data-index="6"></div>
+        <div class="cell" data-index="7"></div>
+        <div class="cell" data-index="8"></div>
+
+    </div>
+
+    <button id="restart">🔄 Nytt spel</button>
+
+    <div class="help">
+        🖱️ Klicka med musen på en ruta<br>
+        👆 Tryck på skärmen<br>
+        🎮 Makey Makey: använd pilarna och SPACE
+    </div>
+
+</div>
+
+<script>
+
+const cells = document.querySelectorAll(".cell");
+
+const statusText = document.getElementById("status");
+
+const winnerMessage =
+    document.getElementById("winnerMessage");
+
+const player1Input =
+    document.getElementById("player1");
+
+const player2Input =
+    document.getElementById("player2");
+
+const startButton =
+    document.getElementById("startGame");
+
+const restartButton =
+    document.getElementById("restart");
+
+
+let board = [
+    "", "", "",
+    "", "", "",
+    "", "", ""
+];
+
+let currentPlayer = "X";
+
+let gameOver = true;
+
+let player1 = "";
+
+let player2 = "";
+
+let cursorPosition = 0;
+
+
+const winningLines = [
+
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+
+    [0, 4, 8],
+    [2, 4, 6]
+
+];
+
+
+function startGame() {
+
+    player1 =
+        player1Input.value.trim();
+
+    player2 =
+        player2Input.value.trim();
+
+
+    if (player1 === "") {
+        player1 = "Spelare 1";
+    }
+
+    if (player2 === "") {
+        player2 = "Spelare 2";
+    }
+
+
+    board = [
+        "", "", "",
+        "", "", "",
+        "", "", ""
+    ];
+
+    currentPlayer = "X";
+
+    gameOver = false;
+
+    cursorPosition = 0;
+
+    winnerMessage.textContent = "";
+
+    statusText.textContent =
+        player1 + ":s tur ❌";
+
+    drawBoard();
+
+}
+
+
+function drawBoard() {
+
+    cells.forEach((cell, index) => {
+
+        cell.textContent =
+            board[index];
+
+        cell.classList.remove(
+            "x",
+            "o",
+            "win"
+        );
+
+        if (board[index] === "X") {
+
+            cell.classList.add("x");
+
+        }
+
+        if (board[index] === "O") {
+
+            cell.classList.add("o");
+
+        }
+
+    });
+
+    updateCursor();
+
+}
+
+
+function updateCursor() {
+
+    cells.forEach(cell => {
+
+        cell.style.outline = "none";
+
+    });
+
+
+    if (!gameOver) {
+
+        cells[cursorPosition].style.outline =
+            "5px solid yellow";
+
+    }
+
+}
+
+
+function makeMove(index) {
+
+    if (gameOver) {
+        return;
+    }
+
+    if (board[index] !== "") {
+        return;
+    }
+
+
+    board[index] =
+        currentPlayer;
+
+    drawBoard();
+
+
+    const winningLine =
+        checkWinner();
+
+
+    if (winningLine) {
+
+        gameOver = true;
+
+        winningLine.forEach(index => {
+
+            cells[index].classList.add("win");
+
+        });
+
+
+        const winnerName =
+            currentPlayer === "X"
+                ? player1
+                : player2;
+
+
+        winnerMessage.textContent =
+            "🏆 " + winnerName + " vinner! 🏆";
+
+
+        statusText.textContent =
+            "🎉 GRATTIS! 🎉";
+
+
+        createConfetti();
+
+        createFireworks();
+
+        return;
+
+    }
+
+
+    if (board.every(cell => cell !== "")) {
+
+        gameOver = true;
+
+        statusText.textContent =
+            "🤝 Det blev oavgjort!";
+
+        winnerMessage.textContent =
+            "Bra spelat!";
+
+        return;
+
+    }
+
+
+    currentPlayer =
+        currentPlayer === "X"
+            ? "O"
+            : "X";
+
+
+    if (currentPlayer === "X") {
+
+        statusText.textContent =
+            player1 + ":s tur ❌";
+
+    } else {
+
+        statusText.textContent =
+            player2 + ":s tur ⭕";
+
+    }
+
+
+    updateCursor();
+
+}
+
+
+function checkWinner() {
+
+    for (const line of winningLines) {
+
+        const a = line[0];
+
+        const b = line[1];
+
+        const c = line[2];
+
+
+        if (
+            board[a] !== "" &&
+            board[a] === board[b] &&
+            board[a] === board[c]
+        ) {
+
+            return line;
+
+        }
+
+    }
+
+
+    return null;
+
+}
+
+
+function restartGame() {
+
+    startGame();
+
+}
+
+
+function createConfetti() {
+
+    for (let i = 0; i < 180; i++) {
+
+        const piece =
+            document.createElement("div");
+
+        piece.className =
+            "confetti";
+
+
+        piece.style.left =
+            Math.random() * 100 + "vw";
+
+
+        piece.style.animationDuration =
+            (2 + Math.random() * 3) + "s";
+
+
+        piece.style.animationDelay =
+            Math.random() * 1.5 + "s";
+
+
+        piece.style.backgroundColor =
+            randomColor();
+
+
+        piece.style.transform =
+            "rotate(" +
+            Math.random() * 360 +
+            "deg)";
+
+
+        document.body.appendChild(piece);
+
+
+        setTimeout(() => {
+
+            piece.remove();
+
+        }, 6000);
+
+    }
+
+}
+
+
+function createFireworks() {
+
+    const positions = [
+
+        {
+            x: "25vw",
+            y: "25vh"
+        },
+
+        {
+            x: "75vw",
+            y: "25vh"
+        },
+
+        {
+            x: "50vw",
+            y: "20vh"
+        },
+
+        {
+            x: "30vw",
+            y: "45vh"
+        },
+
+        {
+            x: "70vw",
+            y: "45vh"
+        }
+
+    ];
+
+
+    positions.forEach((position, index) => {
+
+        setTimeout(() => {
+
+            makeFirework(
+                position.x,
+                position.y
+            );
+
+        }, index * 450);
+
+    });
+
+}
+
+
+function makeFirework(left, top) {
+
+    const center =
+        document.createElement("div");
+
+    center.style.position =
+        "fixed";
+
+    center.style.left =
+        left;
+
+    center.style.top =
+        top;
+
+    center.style.width =
+        "1px";
+
+    center.style.height =
+        "1px";
+
+    center.style.zIndex =
+        "18";
+
+    document.body.appendChild(center);
+
+
+    for (let i = 0; i < 35; i++) {
+
+        const spark =
+            document.createElement("div");
+
+        spark.className =
+            "firework";
+
+
+        spark.style.left =
+            "0px";
+
+        spark.style.top =
+            "0px";
+
+
+        const angle =
+            Math.random() *
+            Math.PI * 2;
+
+
+        const distance =
+            50 + Math.random() * 130;
+
+
+        spark.style.setProperty(
+            "--x",
+            Math.cos(angle) *
+            distance +
+            "px"
+        );
+
+
+        spark.style.setProperty(
+            "--y",
+            Math.sin(angle) *
+            distance +
+            "px"
+        );
+
+
+        spark.style.backgroundColor =
+            randomColor();
+
+
+        center.appendChild(spark);
+
+
+        setTimeout(() => {
+
+            spark.remove();
+
+        }, 1100);
+
+    }
+
+
+    setTimeout(() => {
+
+        center.remove();
+
+    }, 1200);
+
+}
+
+
+function randomColor() {
+
+    const colors = [
+
+        "#ff3b3b",
+        "#ffd43b",
+        "#3bff72",
+        "#3bd5ff",
+        "#b83bff",
+        "#ff6bcb",
+        "#ffffff"
+
+    ];
+
+
+    return colors[
+        Math.floor(
+            Math.random() *
+            colors.length
+        )
+    ];
+
+}
+
+
+/* MUS OCH TOUCH */
+
+cells.forEach((cell, index) => {
+
+    cell.addEventListener(
+        "click",
+        function() {
+
+            cursorPosition = index;
+
+            makeMove(index);
+
+        }
+    );
+
+});
+
+
+/* MAKEY MAKEY OCH TANGENTBORD */
+
+document.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (
+            event.key === "ArrowRight"
+        ) {
+
+            event.preventDefault();
+
+            cursorPosition =
+                (cursorPosition + 1) % 9;
+
+            updateCursor();
+
+        }
+
+
+        if (
+            event.key === "ArrowLeft"
+        ) {
+
+            event.preventDefault();
+
+            cursorPosition =
+                (cursorPosition + 8) % 9;
+
+            updateCursor();
+
+        }
+
+
+        if (
+            event.key === "ArrowDown"
+        ) {
+
+            event.preventDefault();
+
+            cursorPosition =
+                (cursorPosition + 3) % 9;
+
+            updateCursor();
+
+        }
+
+
+        if (
+            event.key === "ArrowUp"
+        ) {
+
+            event.preventDefault();
+
+            cursorPosition =
+                (cursorPosition + 6) % 9;
+
+            updateCursor();
+
+        }
+
+
+        if (
+            event.code === "Space"
+        ) {
+
+            event.preventDefault();
+
+            makeMove(cursorPosition);
+
+        }
+
+
+        if (
+            event.key === "Enter"
+        ) {
+
+            event.preventDefault();
+
+            makeMove(cursorPosition);
+
+        }
+
+
+        if (
+            event.key === "r" ||
+            event.key === "R"
+        ) {
+
+            restartGame();
+
+        }
+
+    }
+);
+
+
+/* KNAPPAR */
+
+startButton.addEventListener(
+    "click",
+    startGame
+);
+
+
+restartButton.addEventListener(
+    "click",
+    restartGame
+);
+
+
+drawBoard();
+
+</script>
+
+</body>
+</html>
