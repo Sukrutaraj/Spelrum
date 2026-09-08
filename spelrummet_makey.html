@@ -66,16 +66,14 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 #touchControls{
   position:fixed;left:40px;top:40px;z-index:999999;
   display:none;flex-direction:column;align-items:center;gap:10px;
-  padding:10px;border-radius:24px;
+  padding:14px;border-radius:24px;
   background:rgba(0,0,0,0.5);backdrop-filter:blur(10px);
   touch-action:none;user-select:none;-webkit-user-select:none;
+  cursor:grab;
+  box-shadow:0 4px 20px rgba(0,0,0,0.5);
+  border:1px solid rgba(34,197,94,0.2);
 }
-#touchDragHandle{
-  width:100%;padding:10px 14px;border-radius:12px;
-  background:rgba(255,255,255,0.08);color:#86efac;
-  font-size:14px;text-align:center;letter-spacing:1px;
-  cursor:grab;touch-action:none;
-}
+#touchControls:active{cursor:grabbing;}
 .touch-row{display:flex;gap:10px;}
 .touch-btn{
   width:82px;height:82px;border:none;border-radius:22px;
@@ -541,26 +539,37 @@ document.querySelectorAll('.touch-btn').forEach(function(btn){
   },{passive:false});
 });
 
-/* Drag */
+/* Drag — whole panel is draggable */
 (function(){
   var tc = document.getElementById('touchControls');
-  var dh = document.getElementById('touchDragHandle');
   var dragging=false, startX=0, startY=0, startL=0, startT=0;
-  dh.addEventListener('pointerdown',function(e){
-    e.preventDefault(); dragging=true;
+  var moved=false;
+
+  tc.addEventListener('pointerdown',function(e){
+    // Don't start drag if pressing a game button
+    if(e.target.classList.contains('touch-btn')) return;
+    e.preventDefault();
+    dragging=true; moved=false;
+    tc.setPointerCapture(e.pointerId);
     var r=tc.getBoundingClientRect();
-    startL=r.left; startT=r.top; startX=e.clientX; startY=e.clientY;
-    dh.style.cursor='grabbing';
+    startL=r.left; startT=r.top;
+    startX=e.clientX; startY=e.clientY;
+    tc.style.cursor='grabbing';
   },{passive:false});
-  window.addEventListener('pointermove',function(e){
-    if(!dragging) return; e.preventDefault();
-    var nl=Math.max(0,Math.min(window.innerWidth-tc.offsetWidth, startL+e.clientX-startX));
-    var nt=Math.max(0,Math.min(window.innerHeight-tc.offsetHeight, startT+e.clientY-startY));
+
+  tc.addEventListener('pointermove',function(e){
+    if(!dragging) return;
+    e.preventDefault();
+    var dx=e.clientX-startX, dy=e.clientY-startY;
+    if(Math.abs(dx)>5||Math.abs(dy)>5) moved=true;
+    var nl=Math.max(0,Math.min(window.innerWidth-tc.offsetWidth, startL+dx));
+    var nt=Math.max(0,Math.min(window.innerHeight-tc.offsetHeight, startT+dy));
     tc.style.left=nl+'px'; tc.style.top=nt+'px';
   },{passive:false});
-  function stop(){ dragging=false; dh.style.cursor='grab'; }
-  window.addEventListener('pointerup',stop);
-  window.addEventListener('pointercancel',stop);
+
+  function stop(){ dragging=false; tc.style.cursor='grab'; }
+  tc.addEventListener('pointerup',stop);
+  tc.addEventListener('pointercancel',stop);
 })();
 
 </script>
@@ -568,7 +577,6 @@ document.querySelectorAll('.touch-btn').forEach(function(btn){
 <button id="touchToggle" onclick="toggleTouch()">🎮 Touch</button>
 
 <div id="touchControls">
-  <div id="touchDragHandle">✋ Flytta kontroller</div>
   <div class="touch-row">
     <button class="touch-btn" data-key="ArrowUp">↑</button>
   </div>
