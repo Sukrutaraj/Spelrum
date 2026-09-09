@@ -76,16 +76,16 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 #touchControls:active{cursor:grabbing;}
 .touch-row{display:flex;gap:10px;}
 .touch-btn{
-  width:160px;height:160px;border:none;border-radius:32px;
-  font-size:80px;
+  width:82px;height:82px;border:none;border-radius:22px;
+  font-size:34px;
   background:rgba(20,20,20,0.92);color:#86efac;
-  border:3px solid rgba(34,197,94,0.5);
-  box-shadow:0 0 24px rgba(34,197,94,0.3);
+  border:2px solid rgba(34,197,94,0.4);
+  box-shadow:0 0 18px rgba(34,197,94,0.22);
   touch-action:manipulation;cursor:pointer;
   -webkit-tap-highlight-color:transparent;
 }
 .touch-btn:active{transform:scale(0.94);background:rgba(34,197,94,0.3);}
-.space-btn{width:340px;font-size:40px;}
+.space-btn{width:174px;font-size:18px;}
 
 /* ── Scroll arrows ── */
 .scroll-arrow{
@@ -536,7 +536,18 @@ var controlsVisible = false;
 
 function toggleTouch(){
   controlsVisible = !controlsVisible;
-  document.getElementById('touchControls').style.display = controlsVisible ? 'flex' : 'none';
+  var tc = document.getElementById('touchControls');
+  if(controlsVisible){
+    tc.style.display = 'flex';
+    // Set explicit left/top so drag works immediately
+    var r = tc.getBoundingClientRect();
+    if(!tc.style.left || tc.style.left===''){
+      tc.style.left = r.left + 'px';
+      tc.style.top  = r.top  + 'px';
+    }
+  } else {
+    tc.style.display = 'none';
+  }
 }
 
 function fireKey(key){
