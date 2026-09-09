@@ -50,42 +50,24 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 #staffBtn.active{background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);}
 #staffBtn:hover{background:rgba(255,255,255,0.15);}
 
-/* ── Touch controls ── */
+/* TOUCH CONTROLS */
 #touchToggle{
-  position:fixed;bottom:16px;right:16px;z-index:999999;
-  display:none;
-  border:none;border-radius:14px;padding:12px 18px;
-  font-size:16px;font-weight:700;
+  position:fixed;
+  bottom:16px;
+  right:16px;
+  z-index:9999;
+  border:none;
+  border-radius:14px;
+  padding:12px 18px;
+  font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;
+  font-size:16px;
   background:rgba(34,197,94,0.18);
   border:1px solid rgba(34,197,94,0.35);
-  color:#86efac;cursor:pointer;
+  color:#86efac;
+  cursor:pointer;
   backdrop-filter:blur(8px);
   box-shadow:0 6px 24px rgba(0,0,0,0.4);
-  -webkit-tap-highlight-color:transparent;
 }
-#touchControls{
-  position:fixed;left:40px;top:40px;z-index:999999;
-  display:none;flex-direction:column;align-items:center;gap:10px;
-  padding:14px;border-radius:24px;
-  background:rgba(0,0,0,0.5);backdrop-filter:blur(10px);
-  touch-action:none;user-select:none;-webkit-user-select:none;
-  cursor:grab;
-  box-shadow:0 4px 20px rgba(0,0,0,0.5);
-  border:1px solid rgba(34,197,94,0.2);
-}
-#touchControls:active{cursor:grabbing;}
-.touch-row{display:flex;gap:10px;}
-.touch-btn{
-  width:82px;height:82px;border:none;border-radius:22px;
-  font-size:34px;
-  background:rgba(20,20,20,0.92);color:#86efac;
-  border:2px solid rgba(34,197,94,0.4);
-  box-shadow:0 0 18px rgba(34,197,94,0.22);
-  touch-action:manipulation;cursor:pointer;
-  -webkit-tap-highlight-color:transparent;
-}
-.touch-btn:active{transform:scale(0.94);background:rgba(34,197,94,0.3);}
-.space-btn{width:174px;font-size:18px;}
 
 /* ── Scroll arrows ── */
 .scroll-arrow{
@@ -106,6 +88,66 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 .scroll-arrow:active{transform:scale(0.92);}
 #scrollUp  {top:50%; left:8px; transform:translateY(-50%) rotate(0deg);}
 #scrollDown{top:50%; right:8px;transform:translateY(-50%) rotate(0deg);}
+</style>
+
+<style id="improved-touch-style">
+#touchControls{
+  position:fixed !important;
+  left:40px;
+  top:40px;
+  right:auto !important;
+  bottom:auto !important;
+  z-index:99999;
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  padding:10px;
+  border-radius:24px;
+  background:rgba(0,0,0,0.35);
+  backdrop-filter:blur(10px);
+  touch-action:none;
+  user-select:none;
+  -webkit-user-select:none;
+  will-change:transform;
+}
+#touchDragHandle{
+  width:100%;
+  padding:10px 14px;
+  border-radius:16px;
+  background:rgba(255,255,255,0.08);
+  color:#86efac;
+  font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;
+  font-size:14px;
+  text-align:center;
+  cursor:grab;
+  touch-action:none;
+}
+.touch-row{
+  display:flex;
+  gap:10px;
+}
+.touch-btn{
+  width:82px;
+  height:82px;
+  border:none;
+  border-radius:22px;
+  font-size:34px;
+  font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;
+  background:rgba(20,20,20,0.92);
+  color:#86efac;
+  border:2px solid rgba(34,197,94,0.4);
+  box-shadow:0 0 18px rgba(34,197,94,0.22);
+  touch-action:manipulation;
+}
+.touch-btn:active{
+  transform:scale(0.92);
+  background:rgba(34,197,94,0.25);
+}
+.space-btn{
+  width:174px;
+  font-size:18px;
+}
 </style>
 </head>
 <body>
@@ -349,6 +391,7 @@ function openGame(g){
   document.getElementById('gameFrame').src = currentBlob;
   setView('viewGame');
   document.getElementById('touchToggle').style.display='block';
+  document.getElementById('touchToggle').style.zIndex='999999';
 }
 
 function closeGame(){
@@ -356,7 +399,6 @@ function closeGame(){
   if(currentBlob){URL.revokeObjectURL(currentBlob);currentBlob=null;}
   document.getElementById('touchToggle').style.display='none';
   document.getElementById('touchControls').style.display='none';
-  controlsVisible=false;
   setView('viewGames');
 }
 
@@ -531,127 +573,88 @@ function toggleStaff(){
 buildCats();
 fetchDeltagar('deltagarspel_makey');
 
-/* ── Touch controls JS ── */
-var controlsVisible = false;
+/* ── Touch controls ── */
+(() => {
 
-function toggleTouch(){
+const touchToggle   = document.getElementById("touchToggle");
+const touchControls = document.getElementById("touchControls");
+const dragHandle    = document.getElementById("touchDragHandle");
+const iframe        = document.getElementById("gameFrame");
+
+if(!touchToggle || !touchControls || !dragHandle) return;
+
+// SHOW / HIDE
+let controlsVisible = false;
+touchToggle.addEventListener("click", () => {
   controlsVisible = !controlsVisible;
-  var tc = document.getElementById('touchControls');
-  if(controlsVisible){
-    tc.style.display = 'flex';
-    // Set explicit left/top so drag works immediately
-    var r = tc.getBoundingClientRect();
-    if(!tc.style.left || tc.style.left===''){
-      tc.style.left = r.left + 'px';
-      tc.style.top  = r.top  + 'px';
-    }
-  } else {
-    tc.style.display = 'none';
-  }
-}
-
-function fireKey(key){
-  var eventData = {key:key, code:key===' '?'Space':('Arrow'+key.replace('Arrow','')), bubbles:true, cancelable:true};
-  document.dispatchEvent(new KeyboardEvent('keydown', eventData));
-  var iframe = document.getElementById('gameFrame');
-  try{
-    if(iframe && iframe.contentWindow){
-      iframe.contentWindow.dispatchEvent(new KeyboardEvent('keydown', eventData));
-      if(iframe.contentWindow.document)
-        iframe.contentWindow.document.dispatchEvent(new KeyboardEvent('keydown', eventData));
-    }
-  }catch(e){}
-}
-
-document.querySelectorAll('.touch-btn').forEach(function(btn){
-  btn.addEventListener('pointerdown', function(e){
-    e.preventDefault(); e.stopPropagation();
-    fireKey(btn.dataset.key);
-    btn.style.transform='scale(0.94)';
-    setTimeout(function(){btn.style.transform='';},120);
-  },{passive:false});
+  touchControls.style.display = controlsVisible ? "flex" : "none";
 });
 
-/* Drag — whole panel is draggable */
-(function(){
-  var tc = document.getElementById('touchControls');
-  var dragging=false, startX=0, startY=0, startL=0, startT=0;
-  var moved=false;
+// FIRE KEY
+function fireKey(key){
+  const eventData = { key:key, code:key===" "?"Space":key, bubbles:true, cancelable:true };
+  document.dispatchEvent(new KeyboardEvent("keydown", eventData));
+  try{
+    if(iframe && iframe.contentWindow){
+      iframe.contentWindow.dispatchEvent(new KeyboardEvent("keydown", eventData));
+      if(iframe.contentWindow.document)
+        iframe.contentWindow.document.dispatchEvent(new KeyboardEvent("keydown", eventData));
+    }
+  }catch(err){}
+}
 
-  tc.addEventListener('pointerdown',function(e){
-    // Don't start drag if pressing a game button
-    if(e.target.classList.contains('touch-btn')) return;
-    e.preventDefault();
-    dragging=true; moved=false;
-    var r=tc.getBoundingClientRect();
-    startL=r.left; startT=r.top;
-    startX=e.clientX; startY=e.clientY;
-    tc.style.cursor='grabbing';
-  },{passive:false});
+// BUTTONS
+document.querySelectorAll(".touch-btn").forEach(btn => {
+  const key = btn.dataset.key;
+  btn.addEventListener("pointerdown", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    btn.style.transform = "scale(0.92)";
+    fireKey(key);
+    setTimeout(() => { btn.style.transform = ""; }, 120);
+  }, {passive:false});
+});
 
-  // Listen on window so drag keeps working even outside the panel
-  window.addEventListener('pointermove',function(e){
-    if(!dragging) return;
-    e.preventDefault();
-    var dx=e.clientX-startX, dy=e.clientY-startY;
-    if(Math.abs(dx)>5||Math.abs(dy)>5) moved=true;
-    var nl=Math.max(0,Math.min(window.innerWidth-tc.offsetWidth, startL+dx));
-    var nt=Math.max(0,Math.min(window.innerHeight-tc.offsetHeight, startT+dy));
-    tc.style.left=nl+'px'; tc.style.top=nt+'px';
-  },{passive:false});
+// DRAG — via handle, window listens for move
+let dragging = false;
+let startX = 0, startY = 0, startLeft = 0, startTop = 0;
 
-  function stop(){ dragging=false; tc.style.cursor='grab'; }
-  window.addEventListener('pointerup',stop);
-  window.addEventListener('pointercancel',stop);
+dragHandle.addEventListener("pointerdown", (e) => {
+  e.preventDefault(); e.stopPropagation();
+  dragging = true;
+  const rect = touchControls.getBoundingClientRect();
+  startLeft = rect.left; startTop = rect.top;
+  startX = e.clientX; startY = e.clientY;
+  dragHandle.style.cursor = "grabbing";
+}, {passive:false});
+
+window.addEventListener("pointermove", (e) => {
+  if(!dragging) return;
+  e.preventDefault();
+  const dx = e.clientX - startX;
+  const dy = e.clientY - startY;
+  touchControls.style.left = Math.max(0, Math.min(window.innerWidth  - touchControls.offsetWidth,  startLeft + dx)) + "px";
+  touchControls.style.top  = Math.max(0, Math.min(window.innerHeight - touchControls.offsetHeight, startTop  + dy)) + "px";
+}, {passive:false});
+
+function stopDrag(){ dragging = false; dragHandle.style.cursor = "grab"; }
+window.addEventListener("pointerup",     stopDrag);
+window.addEventListener("pointercancel", stopDrag);
+
+// Z-INDEX
+touchControls.style.zIndex = "999999";
+touchToggle.style.zIndex   = "999999";
+
+// PREVENT GESTURES
+touchControls.addEventListener("gesturestart", e => e.preventDefault());
+touchControls.addEventListener("touchstart",   e => e.stopPropagation(), {passive:false});
+
 })();
-
-
-/* ── Scroll arrows ── */
-function updateScrollArrows(){
-  var list = document.getElementById('catList');
-  if(!list) return;
-  var up   = document.getElementById('scrollUp');
-  var down = document.getElementById('scrollDown');
-  if(!up||!down) return;
-  var atTop    = list.scrollTop <= 4;
-  var atBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 4;
-  var needsScroll = list.scrollHeight > list.clientHeight + 8;
-  up.style.display   = (needsScroll && !atTop)    ? 'flex' : 'none';
-  down.style.display = (needsScroll && !atBottom) ? 'flex' : 'none';
-}
-function scrollCats(dir){
-  var list = document.getElementById('catList');
-  if(!list) return;
-  list.scrollBy({top: dir * list.clientHeight * 0.6, behavior:'smooth'});
-  setTimeout(updateScrollArrows, 350);
-}
-// Show/hide arrows based on which view is active
-function updateScrollVisibility(){
-  var isCats = document.getElementById('viewCats') &&
-               document.getElementById('viewCats').classList.contains('active');
-  if(!isCats){
-    var up = document.getElementById('scrollUp');
-    var dn = document.getElementById('scrollDown');
-    if(up) up.style.display='none';
-    if(dn) dn.style.display='none';
-    return;
-  }
-  updateScrollArrows();
-}
-(function(){
-  var list = document.getElementById('catList');
-  if(list){
-    list.addEventListener('scroll', updateScrollArrows);
-    // Initial check after cats are built
-    setTimeout(updateScrollArrows, 300);
-  }
-})();
-
 </script>
 
-<button id="touchToggle" onclick="toggleTouch()">🎮 Touch</button>
+<button id="touchToggle" style="display:none">🎮 Touch</button>
 
 <div id="touchControls">
+  <div id="touchDragHandle">✋ Flytta kontroller</div>
   <div class="touch-row">
     <button class="touch-btn" data-key="ArrowUp">↑</button>
   </div>
