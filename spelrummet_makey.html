@@ -20,14 +20,14 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 .bar-title{font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;font-size:clamp(14px,2vw,20px);letter-spacing:2px;flex:1;}
 #viewCats .top-bar{border-bottom:none;background:transparent;}
 .hub-title{font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;font-size:clamp(22px,4vw,50px);letter-spacing:3px;background:linear-gradient(135deg,#22c55e,#86efac,#4ade80);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;}
-.key-display{display:flex;justify-content:center;align-items:center;gap:6px;flex-shrink:0;padding:8px 0 4px;flex-wrap:wrap;}
+.key-display{display:flex;justify-content:center;align-items:center;gap:6px;flex-shrink:0;padding:4px 0 2px;flex-wrap:wrap;}
 .key{background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:4px 10px;font-size:clamp(12px,1.8vw,16px);font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;letter-spacing:1px;color:#22c55e;}
-.cat-scroll{flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(10px,1.8vh,18px);padding:clamp(10px,1.5vh,20px) clamp(16px,4vw,40px);-webkit-overflow-scrolling:touch;}
-.cat-btn{width:100%;max-width:500px;display:flex;align-items:center;gap:clamp(14px,2.5vw,24px);padding:clamp(14px,2.2vh,24px) clamp(18px,3vw,32px);border-radius:20px;cursor:pointer;border:2px solid transparent;transition:transform .16s,box-shadow .16s;-webkit-tap-highlight-color:transparent;user-select:none;}
+.cat-scroll{flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(4px,0.8vh,10px);padding:clamp(6px,1vh,12px) clamp(16px,4vw,40px);-webkit-overflow-scrolling:touch;}
+.cat-btn{width:100%;max-width:500px;display:flex;align-items:center;gap:clamp(10px,2vw,20px);padding:clamp(8px,1.2vh,16px) clamp(14px,2.5vw,28px);border-radius:16px;cursor:pointer;border:2px solid transparent;transition:transform .16s,box-shadow .16s;-webkit-tap-highlight-color:transparent;user-select:none;}
 .cat-btn:hover,.cat-btn:active{transform:scale(1.03) translateY(-2px);box-shadow:0 10px 35px rgba(0,0,0,0.5);}
-.cat-btn-icon{font-size:clamp(30px,5vw,52px);line-height:1;flex-shrink:0;}
-.cat-btn-name{font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;font-size:clamp(18px,2.8vw,30px);letter-spacing:2px;}
-.cat-btn-count{font-size:clamp(11px,1.4vw,14px);opacity:0.65;margin-top:2px;}
+.cat-btn-icon{font-size:clamp(22px,3.5vw,38px);line-height:1;flex-shrink:0;}
+.cat-btn-name{font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;font-size:clamp(14px,2vw,22px);letter-spacing:2px;}
+.cat-btn-count{font-size:clamp(10px,1.2vw,13px);opacity:0.65;margin-top:1px;}
 .games-scroll{flex:1;overflow-y:auto;padding:clamp(12px,2vh,22px) clamp(12px,2vw,28px);-webkit-overflow-scrolling:touch;}
 .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(130px,16vw,200px),1fr));gap:clamp(10px,1.8vw,18px);}
 .game-card{position:relative;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.08);border-radius:16px;padding:clamp(12px,2vh,20px) 10px;cursor:pointer;text-align:center;transition:transform .15s,background .15s,box-shadow .15s;display:flex;flex-direction:column;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;user-select:none;}
@@ -76,16 +76,36 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 #touchControls:active{cursor:grabbing;}
 .touch-row{display:flex;gap:10px;}
 .touch-btn{
-  width:110px;height:110px;border:none;border-radius:26px;
-  font-size:52px;
+  width:160px;height:160px;border:none;border-radius:32px;
+  font-size:80px;
   background:rgba(20,20,20,0.92);color:#86efac;
-  border:2px solid rgba(34,197,94,0.4);
-  box-shadow:0 0 18px rgba(34,197,94,0.22);
+  border:3px solid rgba(34,197,94,0.5);
+  box-shadow:0 0 24px rgba(34,197,94,0.3);
   touch-action:manipulation;cursor:pointer;
   -webkit-tap-highlight-color:transparent;
 }
 .touch-btn:active{transform:scale(0.94);background:rgba(34,197,94,0.3);}
-.space-btn{width:234px;font-size:26px;}
+.space-btn{width:340px;font-size:40px;}
+
+/* ── Scroll arrows ── */
+.scroll-arrow{
+  position:fixed;z-index:150;
+  background:rgba(0,0,0,0.55);
+  border:1.5px solid rgba(255,255,255,0.15);
+  border-radius:50%;
+  width:clamp(44px,6vw,64px);height:clamp(44px,6vw,64px);
+  font-size:clamp(20px,3vw,30px);
+  color:rgba(255,255,255,0.7);
+  display:none;align-items:center;justify-content:center;
+  cursor:pointer;transition:background .15s,opacity .15s;
+  -webkit-tap-highlight-color:transparent;
+  backdrop-filter:blur(4px);
+  user-select:none;
+}
+.scroll-arrow:hover{background:rgba(255,255,255,0.18);}
+.scroll-arrow:active{transform:scale(0.92);}
+#scrollUp  {top:50%; left:8px; transform:translateY(-50%) rotate(0deg);}
+#scrollDown{top:50%; right:8px;transform:translateY(-50%) rotate(0deg);}
 </style>
 </head>
 <body>
@@ -252,6 +272,7 @@ function buildCats(){
     '<div style="font-size:15px;font-weight:700;color:#4ade80;">Hur skapar man ett spel?</div>'+
     '<div style="font-size:12px;color:#555;text-align:center;">Steg-för-steg checklistan</div>';
   list.appendChild(how);
+  setTimeout(updateScrollArrows,100);
 }
 
 function showGames(cat){
@@ -573,6 +594,48 @@ document.querySelectorAll('.touch-btn').forEach(function(btn){
   window.addEventListener('pointercancel',stop);
 })();
 
+
+/* ── Scroll arrows ── */
+function updateScrollArrows(){
+  var list = document.getElementById('catList');
+  if(!list) return;
+  var up   = document.getElementById('scrollUp');
+  var down = document.getElementById('scrollDown');
+  if(!up||!down) return;
+  var atTop    = list.scrollTop <= 4;
+  var atBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 4;
+  var needsScroll = list.scrollHeight > list.clientHeight + 8;
+  up.style.display   = (needsScroll && !atTop)    ? 'flex' : 'none';
+  down.style.display = (needsScroll && !atBottom) ? 'flex' : 'none';
+}
+function scrollCats(dir){
+  var list = document.getElementById('catList');
+  if(!list) return;
+  list.scrollBy({top: dir * list.clientHeight * 0.6, behavior:'smooth'});
+  setTimeout(updateScrollArrows, 350);
+}
+// Show/hide arrows based on which view is active
+function updateScrollVisibility(){
+  var isCats = document.getElementById('viewCats') &&
+               document.getElementById('viewCats').classList.contains('active');
+  if(!isCats){
+    var up = document.getElementById('scrollUp');
+    var dn = document.getElementById('scrollDown');
+    if(up) up.style.display='none';
+    if(dn) dn.style.display='none';
+    return;
+  }
+  updateScrollArrows();
+}
+(function(){
+  var list = document.getElementById('catList');
+  if(list){
+    list.addEventListener('scroll', updateScrollArrows);
+    // Initial check after cats are built
+    setTimeout(updateScrollArrows, 300);
+  }
+})();
+
 </script>
 
 <button id="touchToggle" onclick="toggleTouch()">🎮 Touch</button>
@@ -590,6 +653,10 @@ document.querySelectorAll('.touch-btn').forEach(function(btn){
     <button class="touch-btn space-btn" data-key=" ">SPACE</button>
   </div>
 </div>
+
+
+<div class="scroll-arrow" id="scrollUp"   onclick="scrollCats(-1)">▲</div>
+<div class="scroll-arrow" id="scrollDown" onclick="scrollCats(1)">▼</div>
 
 </body>
 </html>
