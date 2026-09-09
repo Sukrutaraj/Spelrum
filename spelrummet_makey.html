@@ -76,8 +76,8 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 #touchControls:active{cursor:grabbing;}
 .touch-row{display:flex;gap:10px;}
 .touch-btn{
-  width:82px;height:82px;border:none;border-radius:22px;
-  font-size:34px;
+  width:110px;height:110px;border:none;border-radius:26px;
+  font-size:52px;
   background:rgba(20,20,20,0.92);color:#86efac;
   border:2px solid rgba(34,197,94,0.4);
   box-shadow:0 0 18px rgba(34,197,94,0.22);
@@ -85,7 +85,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
   -webkit-tap-highlight-color:transparent;
 }
 .touch-btn:active{transform:scale(0.94);background:rgba(34,197,94,0.3);}
-.space-btn{width:174px;font-size:18px;}
+.space-btn{width:234px;font-size:26px;}
 </style>
 </head>
 <body>
@@ -120,7 +120,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 <!-- VIEW 2: GAME GRID -->
 <div class="view" id="viewGames">
   <div class="top-bar">
-    <button class="back-btn" onclick="showCats()">← Kategorier</button>
+    <button class="back-btn" onclick="showCats()">🏠</button>
     <span class="bar-title" id="gamesBarTitle"></span>
   </div>
   <div class="games-scroll"><div class="cards-grid" id="gameList"></div></div>
@@ -129,7 +129,8 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 <!-- VIEW 3: GAME FRAME -->
 <div class="view" id="viewGame">
   <div class="top-bar">
-    <button class="back-btn" onclick="closeGame()">← Meny</button>
+    <button class="back-btn" onclick="showCats()">🏠</button>
+    <button class="back-btn" onclick="closeGame()">← Tillbaka</button>
     <span class="bar-title" id="gameBarTitle"></span>
   </div>
   <iframe id="gameFrame" allowfullscreen></iframe>
@@ -550,14 +551,14 @@ document.querySelectorAll('.touch-btn').forEach(function(btn){
     if(e.target.classList.contains('touch-btn')) return;
     e.preventDefault();
     dragging=true; moved=false;
-    tc.setPointerCapture(e.pointerId);
     var r=tc.getBoundingClientRect();
     startL=r.left; startT=r.top;
     startX=e.clientX; startY=e.clientY;
     tc.style.cursor='grabbing';
   },{passive:false});
 
-  tc.addEventListener('pointermove',function(e){
+  // Listen on window so drag keeps working even outside the panel
+  window.addEventListener('pointermove',function(e){
     if(!dragging) return;
     e.preventDefault();
     var dx=e.clientX-startX, dy=e.clientY-startY;
@@ -568,8 +569,8 @@ document.querySelectorAll('.touch-btn').forEach(function(btn){
   },{passive:false});
 
   function stop(){ dragging=false; tc.style.cursor='grab'; }
-  tc.addEventListener('pointerup',stop);
-  tc.addEventListener('pointercancel',stop);
+  window.addEventListener('pointerup',stop);
+  window.addEventListener('pointercancel',stop);
 })();
 
 </script>
