@@ -531,8 +531,11 @@ async function fetchDeltagar(folder){
         if(!hr.ok) continue;
         var htmlContent=await hr.text();
         GAME_B64[gid]=btoa(unescape(encodeURIComponent(htmlContent)));
+        var gCat = meta.cat || 'deltagarspel';
+        var validCats = ['pilar','mellanslag','action','sonar','webb','deltagarspel'];
+        if(!validCats.includes(gCat)) gCat = 'deltagarspel';
         GAMES.push({id:gid,name:meta.name,emoji:meta.emoji||'🎮',desc:meta.desc||meta.name,
-          category:meta.cat||'deltagarspel',cat:meta.cat||'deltagarspel',url:'',file:meta.file||'',isNew:true});
+          category:gCat,cat:gCat,url:meta.url||'',file:meta.file||'',isNew:true});
       }catch(e){console.warn('Spel ej laddat:',mf.name,e);}
     }
     if(currentCat&&currentCat.id==='deltagarspel') showGames(currentCat);
