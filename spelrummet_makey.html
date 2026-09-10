@@ -504,8 +504,12 @@ async function fetchDeltagar(folder){
   const BASE = 'https://raw.githubusercontent.com/'+REPO+'/main/';
   const API  = 'https://api.github.com/repos/'+REPO+'/contents/'+folder+'?ref=main';
   try{
-    const res = await fetch(API,{headers:{'Accept':'application/vnd.github.v3+json'}});
-    if(!res.ok){ console.log('Deltagarspel: inga spel ännu ('+res.status+')'); return; }
+    // Decode token for authenticated request (higher rate limit)
+    var _tok = typeof DEL_OBF !== 'undefined' ? DEL_OBF.map(function(b,i){return String.fromCharCode(b^('Rolig0301'.charCodeAt(i%9)));}).join('') : '';
+    var _headers = {'Accept':'application/vnd.github.v3+json'};
+    if(_tok) _headers['Authorization'] = 'token ' + _tok;
+    const res = await fetch(API,{headers:_headers});
+    if(!res.ok){ console.log('Deltagarspel: inga spel ännu ('+res.status+')'); buildCats(); return; }
     const files = await res.json();
     if(!Array.isArray(files)) return;
     const metaFiles = files.filter(f=>f.name.startsWith('meta_')&&f.name.endsWith('.json'));
@@ -543,11 +547,9 @@ async function fetchDeltagar(folder){
         added++;
       }catch(e){ console.warn('Spel ej laddat:',mf.name,e); }
     }
-    if(added>0){
-      if(currentCat) showGames(currentCat);
-      else buildCats();
-    }
-  }catch(e){ console.warn('GitHub fetch failed:',e); }
+    buildCats();
+    if(currentCat) showGames(currentCat);
+  }catch(e){ console.warn('GitHub fetch failed:',e); buildCats(); }
 }
 
 
