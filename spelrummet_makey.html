@@ -13,21 +13,21 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 .view{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;}
 .view.active{display:flex;}
 .top-bar{flex-shrink:0;display:flex;align-items:center;padding:clamp(8px,1.5vh,16px) clamp(12px,2vw,24px);gap:12px;background:rgba(0,0,0,0.35);border-bottom:1px solid rgba(255,255,255,0.06);}
-.back-btn{font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;font-size:clamp(18px,2.5vw,28px);font-weight:700;border:none;border-radius:12px;background:rgba(255,255,255,0.09);color:#e0e0f0;padding:clamp(12px,1.8vh,18px) clamp(20px,2.5vw,32px);cursor:pointer;transition:background .15s;white-space:nowrap;-webkit-tap-highlight-color:transparent;}
+.back-btn{font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;font-size:15px;border:none;border-radius:8px;background:rgba(255,255,255,0.09);color:#e0e0f0;padding:7px 16px;cursor:pointer;transition:background .15s;white-space:nowrap;-webkit-tap-highlight-color:transparent;}
 .back-btn:hover{background:rgba(255,255,255,0.18);}
 .home-btn{font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;font-size:15px;border:none;border-radius:8px;background:rgba(34,197,94,0.15);color:#22c55e;padding:7px 16px;cursor:pointer;transition:background .15s;white-space:nowrap;text-decoration:none;display:flex;align-items:center;}
 .home-btn:hover{background:rgba(34,197,94,0.25);}
 .bar-title{font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;font-size:clamp(14px,2vw,20px);letter-spacing:2px;flex:1;}
 #viewCats .top-bar{border-bottom:none;background:transparent;}
 .hub-title{font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;font-size:clamp(22px,4vw,50px);letter-spacing:3px;background:linear-gradient(135deg,#22c55e,#86efac,#4ade80);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;}
-.key-display{display:flex;justify-content:center;align-items:center;gap:6px;flex-shrink:0;padding:4px 0 2px;flex-wrap:wrap;}
+.key-display{display:flex;justify-content:center;align-items:center;gap:6px;flex-shrink:0;padding:8px 0 4px;flex-wrap:wrap;}
 .key{background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:4px 10px;font-size:clamp(12px,1.8vw,16px);font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;letter-spacing:1px;color:#22c55e;}
-.cat-scroll{flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(4px,0.8vh,10px);padding:clamp(6px,1vh,12px) clamp(16px,4vw,40px);-webkit-overflow-scrolling:touch;}
-.cat-btn{width:100%;max-width:600px;display:flex;align-items:center;gap:clamp(12px,2vw,20px);padding:clamp(8px,1.2vh,14px) clamp(16px,2.5vw,28px);border-radius:16px;cursor:pointer;border:2px solid transparent;transition:transform .16s,box-shadow .16s;-webkit-tap-highlight-color:transparent;user-select:none;}
+.cat-scroll{flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(10px,1.8vh,18px);padding:clamp(10px,1.5vh,20px) clamp(16px,4vw,40px);-webkit-overflow-scrolling:touch;}
+.cat-btn{width:100%;max-width:500px;display:flex;align-items:center;gap:clamp(14px,2.5vw,24px);padding:clamp(14px,2.2vh,24px) clamp(18px,3vw,32px);border-radius:20px;cursor:pointer;border:2px solid transparent;transition:transform .16s,box-shadow .16s;-webkit-tap-highlight-color:transparent;user-select:none;}
 .cat-btn:hover,.cat-btn:active{transform:scale(1.03) translateY(-2px);box-shadow:0 10px 35px rgba(0,0,0,0.5);}
-.cat-btn-icon{font-size:clamp(26px,4vw,44px);line-height:1;flex-shrink:0;}
-.cat-btn-name{font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;font-size:clamp(16px,2.2vw,26px);letter-spacing:2px;}
-.cat-btn-count{font-size:clamp(10px,1.2vw,13px);opacity:0.65;margin-top:1px;}
+.cat-btn-icon{font-size:clamp(30px,5vw,52px);line-height:1;flex-shrink:0;}
+.cat-btn-name{font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;font-size:clamp(18px,2.8vw,30px);letter-spacing:2px;}
+.cat-btn-count{font-size:clamp(11px,1.4vw,14px);opacity:0.65;margin-top:2px;}
 .games-scroll{flex:1;overflow-y:auto;padding:clamp(12px,2vh,22px) clamp(12px,2vw,28px);-webkit-overflow-scrolling:touch;}
 .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(130px,16vw,200px),1fr));gap:clamp(10px,1.8vw,18px);}
 .game-card{position:relative;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.08);border-radius:16px;padding:clamp(12px,2vh,20px) 10px;cursor:pointer;text-align:center;transition:transform .15s,background .15s,box-shadow .15s;display:flex;flex-direction:column;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;user-select:none;}
@@ -41,110 +41,51 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 .card-del:hover{background:#dc2626;}
 #viewGame .top-bar{background:rgba(0,0,0,0.92);}
 #gameFrame{flex:1;border:none;width:100%;background:#000;}
-#homeBtn{position:fixed;bottom:14px;left:14px;z-index:200;font-size:clamp(16px,2vw,24px);font-weight:700;border:none;border-radius:12px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);padding:clamp(10px,1.5vh,16px) clamp(18px,2vw,28px);cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:6px;transition:background .15s;-webkit-tap-highlight-color:transparent;}
+#homeBtn{position:fixed;bottom:12px;left:12px;z-index:200;font-size:13px;font-weight:700;border:none;border-radius:8px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);padding:6px 14px;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:6px;transition:background .15s;-webkit-tap-highlight-color:transparent;}
 #homeBtn:hover{background:rgba(255,255,255,0.2);}
-#staffBtn{position:fixed;top:12px;right:12px;z-index:200;font-size:clamp(16px,2vw,24px);font-weight:700;border:none;border-radius:12px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);padding:clamp(10px,1.5vh,16px) clamp(18px,2vw,28px);cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+#staffBtn{position:fixed;top:10px;right:10px;z-index:200;font-size:13px;font-weight:700;
+  border:none;border-radius:8px;background:rgba(255,255,255,0.08);
+  color:rgba(255,255,255,0.5);padding:6px 12px;cursor:pointer;
+  transition:all .15s;-webkit-tap-highlight-color:transparent;}
 #staffBtn.active{background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);}
 #staffBtn:hover{background:rgba(255,255,255,0.15);}
 
-/* TOUCH CONTROLS */
+/* ── Touch controls ── */
 #touchToggle{
-  position:fixed;
-  bottom:16px;
-  right:16px;
-  z-index:9999;
-  border:none;
-  border-radius:14px;
-  padding:12px 18px;
-  font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;
-  font-size:16px;
+  position:fixed;bottom:16px;right:16px;z-index:999999;
+  display:none;
+  border:none;border-radius:14px;padding:12px 18px;
+  font-size:16px;font-weight:700;
   background:rgba(34,197,94,0.18);
   border:1px solid rgba(34,197,94,0.35);
-  color:#86efac;
-  cursor:pointer;
+  color:#86efac;cursor:pointer;
   backdrop-filter:blur(8px);
   box-shadow:0 6px 24px rgba(0,0,0,0.4);
-}
-
-/* ── Scroll arrows ── */
-.scroll-arrow{
-  position:fixed;z-index:150;
-  background:rgba(0,0,0,0.55);
-  border:1.5px solid rgba(255,255,255,0.15);
-  border-radius:50%;
-  width:clamp(44px,6vw,64px);height:clamp(44px,6vw,64px);
-  font-size:clamp(20px,3vw,30px);
-  color:rgba(255,255,255,0.7);
-  display:none;align-items:center;justify-content:center;
-  cursor:pointer;transition:background .15s,opacity .15s;
   -webkit-tap-highlight-color:transparent;
-  backdrop-filter:blur(4px);
-  user-select:none;
 }
-.scroll-arrow:hover{background:rgba(255,255,255,0.18);}
-.scroll-arrow:active{transform:scale(0.92);}
-#scrollUp  {top:50%; left:8px; transform:translateY(-50%) rotate(0deg);}
-#scrollDown{top:50%; right:8px;transform:translateY(-50%) rotate(0deg);}
-</style>
-
-<style id="improved-touch-style">
 #touchControls{
-  position:fixed !important;
-  left:40px;
-  top:40px;
-  right:auto !important;
-  bottom:auto !important;
-  z-index:99999;
-  display:none;
-  flex-direction:column;
-  align-items:center;
-  gap:10px;
-  padding:10px;
-  border-radius:24px;
-  background:rgba(0,0,0,0.35);
-  backdrop-filter:blur(10px);
-  touch-action:none;
-  user-select:none;
-  -webkit-user-select:none;
-  will-change:transform;
-}
-#touchDragHandle{
-  width:100%;
-  padding:10px 14px;
-  border-radius:16px;
-  background:rgba(255,255,255,0.08);
-  color:#86efac;
-  font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;
-  font-size:14px;
-  text-align:center;
+  position:fixed;left:40px;top:40px;z-index:999999;
+  display:none;flex-direction:column;align-items:center;gap:10px;
+  padding:14px;border-radius:24px;
+  background:rgba(0,0,0,0.5);backdrop-filter:blur(10px);
+  touch-action:none;user-select:none;-webkit-user-select:none;
   cursor:grab;
-  touch-action:none;
+  box-shadow:0 4px 20px rgba(0,0,0,0.5);
+  border:1px solid rgba(34,197,94,0.2);
 }
-.touch-row{
-  display:flex;
-  gap:10px;
-}
+#touchControls:active{cursor:grabbing;}
+.touch-row{display:flex;gap:10px;}
 .touch-btn{
-  width:82px;
-  height:82px;
-  border:none;
-  border-radius:22px;
+  width:82px;height:82px;border:none;border-radius:22px;
   font-size:34px;
-  font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;
-  background:rgba(20,20,20,0.92);
-  color:#86efac;
+  background:rgba(20,20,20,0.92);color:#86efac;
   border:2px solid rgba(34,197,94,0.4);
   box-shadow:0 0 18px rgba(34,197,94,0.22);
-  touch-action:manipulation;
+  touch-action:manipulation;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
 }
-.touch-btn:active{
-  transform:scale(0.92);
-  background:rgba(34,197,94,0.25);
-}
-.space-btn{
-  width:174px;
-  font-size:18px;
-}
+.touch-btn:active{transform:scale(0.94);background:rgba(34,197,94,0.3);}
+.space-btn{width:174px;font-size:18px;}
 </style>
 </head>
 <body>
@@ -179,7 +120,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 <!-- VIEW 2: GAME GRID -->
 <div class="view" id="viewGames">
   <div class="top-bar">
-    <button class="back-btn" onclick="showCats()">🏠</button>
+    <button class="back-btn" onclick="showCats()">← Kategorier</button>
     <span class="bar-title" id="gamesBarTitle"></span>
   </div>
   <div class="games-scroll"><div class="cards-grid" id="gameList"></div></div>
@@ -188,8 +129,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 <!-- VIEW 3: GAME FRAME -->
 <div class="view" id="viewGame">
   <div class="top-bar">
-    <button class="back-btn" onclick="showCats()">🏠</button>
-    <button class="back-btn" onclick="closeGame()">← Tillbaka</button>
+    <button class="back-btn" onclick="closeGame()">← Meny</button>
     <span class="bar-title" id="gameBarTitle"></span>
   </div>
   <iframe id="gameFrame" allowfullscreen></iframe>
@@ -311,7 +251,6 @@ function buildCats(){
     '<div style="font-size:15px;font-weight:700;color:#4ade80;">Hur skapar man ett spel?</div>'+
     '<div style="font-size:12px;color:#555;text-align:center;">Steg-för-steg checklistan</div>';
   list.appendChild(how);
-  setTimeout(updateScrollArrows,100);
 }
 
 function showGames(cat){
@@ -388,7 +327,6 @@ function openGame(g){
   document.getElementById('gameFrame').src = currentBlob;
   setView('viewGame');
   document.getElementById('touchToggle').style.display='block';
-  document.getElementById('touchToggle').style.zIndex='999999';
 }
 
 function closeGame(){
@@ -396,6 +334,7 @@ function closeGame(){
   if(currentBlob){URL.revokeObjectURL(currentBlob);currentBlob=null;}
   document.getElementById('touchToggle').style.display='none';
   document.getElementById('touchControls').style.display='none';
+  controlsVisible=false;
   setView('viewGames');
 }
 
@@ -528,11 +467,8 @@ async function fetchDeltagar(folder){
         if(!hr.ok) continue;
         var htmlContent=await hr.text();
         GAME_B64[gid]=btoa(unescape(encodeURIComponent(htmlContent)));
-        var gCat = meta.cat || 'deltagarspel';
-        var validCats = ['pilar','mellanslag','action','sonar','webb','deltagarspel'];
-        if(!validCats.includes(gCat)) gCat = 'deltagarspel';
         GAMES.push({id:gid,name:meta.name,emoji:meta.emoji||'🎮',desc:meta.desc||meta.name,
-          category:gCat,cat:gCat,url:meta.url||'',file:meta.file||'',isNew:true});
+          category:meta.cat||'deltagarspel',cat:meta.cat||'deltagarspel',url:'',file:meta.file||'',isNew:true});
       }catch(e){console.warn('Spel ej laddat:',mf.name,e);}
     }
     if(currentCat&&currentCat.id==='deltagarspel') showGames(currentCat);
@@ -573,12 +509,74 @@ function toggleStaff(){
 buildCats();
 fetchDeltagar('deltagarspel_makey');
 
+/* ── Touch controls JS ── */
+var controlsVisible = false;
+
+function toggleTouch(){
+  controlsVisible = !controlsVisible;
+  document.getElementById('touchControls').style.display = controlsVisible ? 'flex' : 'none';
+}
+
+function fireKey(key){
+  var eventData = {key:key, code:key===' '?'Space':('Arrow'+key.replace('Arrow','')), bubbles:true, cancelable:true};
+  document.dispatchEvent(new KeyboardEvent('keydown', eventData));
+  var iframe = document.getElementById('gameFrame');
+  try{
+    if(iframe && iframe.contentWindow){
+      iframe.contentWindow.dispatchEvent(new KeyboardEvent('keydown', eventData));
+      if(iframe.contentWindow.document)
+        iframe.contentWindow.document.dispatchEvent(new KeyboardEvent('keydown', eventData));
+    }
+  }catch(e){}
+}
+
+document.querySelectorAll('.touch-btn').forEach(function(btn){
+  btn.addEventListener('pointerdown', function(e){
+    e.preventDefault(); e.stopPropagation();
+    fireKey(btn.dataset.key);
+    btn.style.transform='scale(0.94)';
+    setTimeout(function(){btn.style.transform='';},120);
+  },{passive:false});
+});
+
+/* Drag — whole panel is draggable */
+(function(){
+  var tc = document.getElementById('touchControls');
+  var dragging=false, startX=0, startY=0, startL=0, startT=0;
+  var moved=false;
+
+  tc.addEventListener('pointerdown',function(e){
+    // Don't start drag if pressing a game button
+    if(e.target.classList.contains('touch-btn')) return;
+    e.preventDefault();
+    dragging=true; moved=false;
+    tc.setPointerCapture(e.pointerId);
+    var r=tc.getBoundingClientRect();
+    startL=r.left; startT=r.top;
+    startX=e.clientX; startY=e.clientY;
+    tc.style.cursor='grabbing';
+  },{passive:false});
+
+  tc.addEventListener('pointermove',function(e){
+    if(!dragging) return;
+    e.preventDefault();
+    var dx=e.clientX-startX, dy=e.clientY-startY;
+    if(Math.abs(dx)>5||Math.abs(dy)>5) moved=true;
+    var nl=Math.max(0,Math.min(window.innerWidth-tc.offsetWidth, startL+dx));
+    var nt=Math.max(0,Math.min(window.innerHeight-tc.offsetHeight, startT+dy));
+    tc.style.left=nl+'px'; tc.style.top=nt+'px';
+  },{passive:false});
+
+  function stop(){ dragging=false; tc.style.cursor='grab'; }
+  tc.addEventListener('pointerup',stop);
+  tc.addEventListener('pointercancel',stop);
+})();
+
 </script>
 
-<button id="touchToggle" style="display:none">🎮 Touch</button>
+<button id="touchToggle" onclick="toggleTouch()">🎮 Touch</button>
 
 <div id="touchControls">
-  <div id="touchDragHandle">✋ Flytta kontroller</div>
   <div class="touch-row">
     <button class="touch-btn" data-key="ArrowUp">↑</button>
   </div>
@@ -592,78 +590,5 @@ fetchDeltagar('deltagarspel_makey');
   </div>
 </div>
 
-
-<div class="scroll-arrow" id="scrollUp"   onclick="scrollCats(-1)">▲</div>
-<div class="scroll-arrow" id="scrollDown" onclick="scrollCats(1)">▼</div>
-
-
-<script>
-(function(){
-  var touchToggle   = document.getElementById('touchToggle');
-  var touchControls = document.getElementById('touchControls');
-  var dragHandle    = document.getElementById('touchDragHandle');
-  var iframe        = document.getElementById('gameFrame');
-
-  if(!touchToggle||!touchControls||!dragHandle) return;
-
-  // SHOW / HIDE
-  touchToggle.addEventListener('click', function(){
-    var vis = touchControls.style.display === 'flex';
-    touchControls.style.display = vis ? 'none' : 'flex';
-  });
-
-  // FIRE KEY
-  function fireKey(key){
-    var d = {key:key, code:key===' '?'Space':key, bubbles:true, cancelable:true};
-    document.dispatchEvent(new KeyboardEvent('keydown', d));
-    try{
-      if(iframe&&iframe.contentWindow){
-        iframe.contentWindow.dispatchEvent(new KeyboardEvent('keydown', d));
-        if(iframe.contentWindow.document)
-          iframe.contentWindow.document.dispatchEvent(new KeyboardEvent('keydown', d));
-      }
-    }catch(e){}
-  }
-
-  // BUTTONS
-  document.querySelectorAll('.touch-btn').forEach(function(btn){
-    btn.addEventListener('pointerdown', function(e){
-      e.preventDefault(); e.stopPropagation();
-      btn.style.transform='scale(0.92)';
-      fireKey(btn.dataset.key);
-      setTimeout(function(){btn.style.transform='';}, 120);
-    }, {passive:false});
-  });
-
-  // DRAG
-  var dragging=false, startX=0, startY=0, startLeft=0, startTop=0;
-
-  dragHandle.addEventListener('pointerdown', function(e){
-    e.preventDefault(); e.stopPropagation();
-    dragging=true;
-    var r=touchControls.getBoundingClientRect();
-    startLeft=r.left; startTop=r.top;
-    startX=e.clientX; startY=e.clientY;
-    dragHandle.style.cursor='grabbing';
-  }, {passive:false});
-
-  window.addEventListener('pointermove', function(e){
-    if(!dragging) return;
-    e.preventDefault();
-    var dx=e.clientX-startX, dy=e.clientY-startY;
-    touchControls.style.left=Math.max(0,Math.min(window.innerWidth-touchControls.offsetWidth,  startLeft+dx))+'px';
-    touchControls.style.top =Math.max(0,Math.min(window.innerHeight-touchControls.offsetHeight,startTop +dy))+'px';
-  }, {passive:false});
-
-  function stopDrag(){ dragging=false; dragHandle.style.cursor='grab'; }
-  window.addEventListener('pointerup',     stopDrag);
-  window.addEventListener('pointercancel', stopDrag);
-
-  touchControls.style.zIndex='999999';
-  touchToggle.style.zIndex='999999';
-  touchControls.addEventListener('gesturestart', function(e){e.preventDefault();});
-  touchControls.addEventListener('touchstart',   function(e){e.stopPropagation();}, {passive:false});
-})();
-</script>
 </body>
 </html>
