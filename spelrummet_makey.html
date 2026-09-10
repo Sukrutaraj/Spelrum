@@ -500,45 +500,54 @@ function deleteGame(gameId,folder,filename){
 
 /* ── Fetch deltagarspel from GitHub ── */
 async function fetchDeltagar(folder){
-  var REPO='sukrutaraj/Spelrum';
-  var BASE='https://raw.githubusercontent.com/'+REPO+'/main/';
-  var API='https://api.github.com/repos/'+REPO+'/contents/'+folder+'?ref=main';
+  const REPO = 'sukrutaraj/Spelrum';
+  const BASE = 'https://raw.githubusercontent.com/'+REPO+'/main/';
+  const API  = 'https://api.github.com/repos/'+REPO+'/contents/'+folder+'?ref=main';
   try{
-    var res=await fetch(API,{headers:{'Accept':'application/vnd.github.v3+json'}});
-    if(!res.ok) return;
-    var files=await res.json();
+    const res = await fetch(API,{headers:{'Accept':'application/vnd.github.v3+json'}});
+    if(!res.ok){ console.log('Deltagarspel: inga spel ännu ('+res.status+')'); return; }
+    const files = await res.json();
     if(!Array.isArray(files)) return;
-    var metaFiles=files.filter(function(f){return f.name.startsWith('meta_')&&f.name.endsWith('.json');});
-    for(var mf of metaFiles){
+    const metaFiles = files.filter(f=>f.name.startsWith('meta_')&&f.name.endsWith('.json'));
+    if(metaFiles.length===0) return;
+    let added = 0;
+    for(const mf of metaFiles){
       try{
-        var mr=await fetch(BASE+folder+'/'+mf.name);
+        const mr = await fetch(BASE+folder+'/'+mf.name);
         if(!mr.ok) continue;
-        var meta=await mr.json();
-        var gid=mf.name.replace('.json','');
-        if(GAMES.find(function(g){return g.id===gid;})) continue;
+        const meta = await mr.json();
+        const gid  = mf.name.replace('.json','');
+        if(GAMES.find(g=>g.id===gid)) continue;
+        // Link type — no HTML needed
         if(meta.url){
+          var lCat = meta.cat||'deltagarspel';
+          var lValid = ['pilar','mellanslag','action','sonar','webb','deltagarspel'];
+          if(!lValid.includes(lCat)) lCat='deltagarspel';
           GAMES.push({id:gid,name:meta.name,emoji:meta.emoji||'🔗',
-            desc:meta.desc||meta.name,category:meta.cat||'deltagarspel',
-            cat:meta.cat||'deltagarspel',url:meta.url,file:'',isNew:true});
-          continue;
+            desc:meta.desc||meta.name,category:lCat,cat:lCat,url:meta.url,file:'',isNew:true});
+          added++; continue;
         }
-        var htmlFile=files.find(function(f){return f.name===meta.file;});
+        // Fetch HTML
+        const htmlFile = files.find(f=>f.name===meta.file);
         if(!htmlFile) continue;
-        var hr=await fetch(BASE+folder+'/'+meta.file);
+        const hr = await fetch(BASE+folder+'/'+meta.file);
         if(!hr.ok) continue;
-        var htmlContent=await hr.text();
-        GAME_B64[gid]=btoa(unescape(encodeURIComponent(htmlContent)));
-        var gCat = meta.cat || 'deltagarspel';
+        const htmlContent = await hr.text();
+        GAME_B64[gid] = btoa(unescape(encodeURIComponent(htmlContent)));
+        var gCat = meta.cat||'deltagarspel';
         var validCats = ['pilar','mellanslag','action','sonar','webb','deltagarspel'];
-        if(!validCats.includes(gCat)) gCat = 'deltagarspel';
-        GAMES.push({id:gid,name:meta.name,emoji:meta.emoji||'🎮',desc:meta.desc||meta.name,
-          category:gCat,cat:gCat,url:meta.url||'',file:meta.file||'',isNew:true});
-      }catch(e){console.warn('Spel ej laddat:',mf.name,e);}
+        if(!validCats.includes(gCat)) gCat='deltagarspel';
+        GAMES.push({id:gid,name:meta.name,emoji:meta.emoji||'🎮',
+          desc:meta.desc||meta.name,category:gCat,cat:gCat,
+          url:'',file:meta.file||'',isNew:true});
+        added++;
+      }catch(e){ console.warn('Spel ej laddat:',mf.name,e); }
     }
-    // Always rebuild category list so counts and sonar games update
-    buildCats();
-    if(currentCat) showGames(currentCat);
-  }catch(e){console.warn('GitHub fetch failed:',e);}
+    if(added>0){
+      if(currentCat) showGames(currentCat);
+      else buildCats();
+    }
+  }catch(e){ console.warn('GitHub fetch failed:',e); }
 }
 
 
