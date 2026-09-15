@@ -83,6 +83,88 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 }
 .touch-btn:active{transform:scale(0.94);background:rgba(34,197,94,0.3);}
 .space-btn{width:174px;font-size:18px;}
+
+/* TOUCH CONTROLS */
+#touchToggle{
+  position:fixed;
+  bottom:16px;
+  right:16px;
+  z-index:9999;
+  border:none;
+  border-radius:14px;
+  padding:12px 18px;
+  font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;
+  font-size:16px;
+  background:rgba(34,197,94,0.18);
+  border:1px solid rgba(34,197,94,0.35);
+  color:#86efac;
+  cursor:pointer;
+  backdrop-filter:blur(8px);
+  box-shadow:0 6px 24px rgba(0,0,0,0.4);
+}
+</style>
+<style id="improved-touch-style">
+#touchControls{
+  position:fixed !important;
+  left:40px;
+  top:40px;
+  right:auto !important;
+  bottom:auto !important;
+  z-index:99999;
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  padding:10px;
+  border-radius:24px;
+  background:rgba(0,0,0,0.35);
+  backdrop-filter:blur(10px);
+  touch-action:none;
+  user-select:none;
+  -webkit-user-select:none;
+  will-change:transform;
+}
+
+#touchDragHandle{
+  width:100%;
+  padding:10px 14px;
+  border-radius:16px;
+  background:rgba(255,255,255,0.08);
+  color:#86efac;
+  font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;
+  font-size:14px;
+  text-align:center;
+  cursor:grab;
+  touch-action:none;
+}
+
+.touch-row{
+  display:flex;
+  gap:10px;
+}
+
+.touch-btn{
+  width:82px;
+  height:82px;
+  border:none;
+  border-radius:22px;
+  font-size:34px;
+  font-family:'Trebuchet MS','Arial Rounded MT Bold',system-ui,sans-serif;
+  background:rgba(20,20,20,0.92);
+  color:#86efac;
+  border:2px solid rgba(34,197,94,0.4);
+  box-shadow:0 0 18px rgba(34,197,94,0.22);
+  touch-action:manipulation;
+}
+
+.touch-btn:active{
+  transform:scale(0.94);
+}
+
+.space-btn{
+  width:174px;
+  font-size:18px;
+}
 </style>
 </head>
 <body>
@@ -588,5 +670,179 @@ document.querySelectorAll('.touch-btn').forEach(function(btn){
   </div>
 </div>
 
+
+<script>
+(() => {
+
+const touchToggle = document.getElementById("touchToggle");
+const touchControls = document.getElementById("touchControls");
+const dragHandle = document.getElementById("touchDragHandle");
+const iframe = document.getElementById("gameFrame");
+
+if(!touchToggle || !touchControls) return;
+
+// ===== SHOW / HIDE =====
+
+let controlsVisible = false;
+
+touchToggle.addEventListener("click", () => {
+  controlsVisible = !controlsVisible;
+  touchControls.style.display = controlsVisible ? "flex" : "none";
+});
+
+// ===== STABLE KEY SYSTEM =====
+// Main fix:
+// Create NEW keyboard events every time.
+// Previous version reused / routed events incorrectly
+// and iframe focus eventually broke.
+
+function fireKey(key){
+
+  const eventData = {
+    key: key,
+    code: key === " " ? "Space" : key,
+    bubbles: true,
+    cancelable: true
+  };
+
+  // Main document
+  document.dispatchEvent(
+    new KeyboardEvent("keydown", eventData)
+  );
+
+  // iframe window + iframe document
+  try{
+
+    if(iframe && iframe.contentWindow){
+
+      iframe.contentWindow.dispatchEvent(
+        new KeyboardEvent("keydown", eventData)
+      );
+
+      if(iframe.contentWindow.document){
+
+        iframe.contentWindow.document.dispatchEvent(
+          new KeyboardEvent("keydown", eventData)
+        );
+
+      }
+    }
+
+  } catch(err){
+    console.log("iframe dispatch issue", err);
+  }
+}
+
+// ===== BUTTONS =====
+
+document.querySelectorAll(".touch-btn").forEach(btn => {
+
+  const key = btn.dataset.key;
+
+  const press = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    btn.style.transform = "scale(0.92)";
+
+    fireKey(key);
+
+    setTimeout(() => {
+      btn.style.transform = "";
+    }, 120);
+  };
+
+  // pointerdown is most stable on Samsung Flip
+  btn.addEventListener("pointerdown", press, {
+    passive:false
+  });
+
+});
+
+// ===== DRAG SYSTEM =====
+
+let dragging = false;
+
+let startX = 0;
+let startY = 0;
+
+let startLeft = 0;
+let startTop = 0;
+
+dragHandle.addEventListener("pointerdown", (e) => {
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  dragging = true;
+
+  const rect = touchControls.getBoundingClientRect();
+
+  startLeft = rect.left;
+  startTop = rect.top;
+
+  startX = e.clientX;
+  startY = e.clientY;
+
+  dragHandle.style.cursor = "grabbing";
+
+}, { passive:false });
+
+window.addEventListener("pointermove", (e) => {
+
+  if(!dragging) return;
+
+  e.preventDefault();
+
+  const dx = e.clientX - startX;
+  const dy = e.clientY - startY;
+
+  let newLeft = startLeft + dx;
+  let newTop = startTop + dy;
+
+  // keep onscreen
+  newLeft = Math.max(
+    0,
+    Math.min(window.innerWidth - touchControls.offsetWidth, newLeft)
+  );
+
+  newTop = Math.max(
+    0,
+    Math.min(window.innerHeight - touchControls.offsetHeight, newTop)
+  );
+
+  touchControls.style.left = newLeft + "px";
+  touchControls.style.top = newTop + "px";
+
+}, { passive:false });
+
+function stopDragging(){
+
+  dragging = false;
+  dragHandle.style.cursor = "grab";
+
+}
+
+window.addEventListener("pointerup", stopDragging);
+window.addEventListener("pointercancel", stopDragging);
+
+// ===== KEEP CONTROLS ABOVE IFRAME =====
+// Important on touchscreens / fullscreen
+
+touchControls.style.zIndex = "999999";
+touchToggle.style.zIndex = "999999";
+
+// ===== PREVENT TOUCH BROWSER GESTURES =====
+
+touchControls.addEventListener("gesturestart", e => {
+  e.preventDefault();
+});
+
+touchControls.addEventListener("touchstart", e => {
+  e.stopPropagation();
+}, { passive:false });
+
+})();
+</script>
 </body>
 </html>
