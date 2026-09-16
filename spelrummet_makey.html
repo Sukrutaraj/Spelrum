@@ -548,47 +548,7 @@ document.querySelectorAll('.touch-btn').forEach(function(btn){
   },{passive:false});
 });
 
-/* Drag — whole panel is draggable */
-(function(){
-  var tc = document.getElementById('touchControls');
-  var handle = document.getElementById('touchDragHandle');
-  var dragging=false, startX=0, startY=0, startL=0, startT=0;
 
-  // Drag via handle — window listens so drag works anywhere on screen
-  if(handle){
-    handle.addEventListener('pointerdown',function(e){
-      if(e.target.classList.contains('touch-btn')) return;
-      e.preventDefault(); e.stopPropagation();
-      dragging=true;
-      handle.setPointerCapture(e.pointerId);
-      var r=tc.getBoundingClientRect();
-      startL=r.left; startT=r.top;
-      startX=e.clientX; startY=e.clientY;
-    },{passive:false});
-  } else {
-    // Fallback: whole panel draggable
-    tc.addEventListener('pointerdown',function(e){
-      if(e.target.classList.contains('touch-btn')) return;
-      e.preventDefault();
-      dragging=true;
-      var r=tc.getBoundingClientRect();
-      startL=r.left; startT=r.top;
-      startX=e.clientX; startY=e.clientY;
-    },{passive:false});
-  }
-
-  window.addEventListener('pointermove',function(e){
-    if(!dragging) return;
-    e.preventDefault();
-    var dx=e.clientX-startX, dy=e.clientY-startY;
-    tc.style.left=Math.max(0,Math.min(window.innerWidth-tc.offsetWidth,  startL+dx))+'px';
-    tc.style.top =Math.max(0,Math.min(window.innerHeight-tc.offsetHeight, startT+dy))+'px';
-  },{passive:false});
-
-  function stop(){ dragging=false; }
-  window.addEventListener('pointerup',     stop);
-  window.addEventListener('pointercancel', stop);
-})();
 
 </script>
 
@@ -598,7 +558,6 @@ document.querySelectorAll('.touch-btn').forEach(function(btn){
 <button id="touchToggle" onclick="toggleTouch()">🎮 Touch</button>
 
 <div id="touchControls">
-  <div id="touchDragHandle">✋ Flytta kontroller</div>
   <div class="touch-row">
     <button class="touch-btn" data-key="ArrowUp">↑</button>
   </div>
@@ -612,5 +571,36 @@ document.querySelectorAll('.touch-btn').forEach(function(btn){
   </div>
 </div>
 
+
+<script>
+(function(){
+  var tc     = document.getElementById('touchControls');
+  var handle = document.getElementById('touchDragHandle');
+  if(!tc || !handle) return;
+  var dragging=false, startX=0, startY=0, startL=0, startT=0;
+
+  handle.addEventListener('pointerdown',function(e){
+    e.preventDefault(); e.stopPropagation();
+    dragging=true;
+    handle.setPointerCapture(e.pointerId);
+    var r=tc.getBoundingClientRect();
+    startL=r.left; startT=r.top;
+    startX=e.clientX; startY=e.clientY;
+    handle.style.cursor='grabbing';
+  },{passive:false});
+
+  window.addEventListener('pointermove',function(e){
+    if(!dragging) return;
+    e.preventDefault();
+    var dx=e.clientX-startX, dy=e.clientY-startY;
+    tc.style.left=Math.max(0,Math.min(window.innerWidth-tc.offsetWidth,  startL+dx))+'px';
+    tc.style.top =Math.max(0,Math.min(window.innerHeight-tc.offsetHeight, startT+dy))+'px';
+  },{passive:false});
+
+  function stop(){ dragging=false; handle.style.cursor='grab'; }
+  window.addEventListener('pointerup',     stop);
+  window.addEventListener('pointercancel', stop);
+})();
+</script>
 </body>
 </html>
