@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Spelrummet – MakeyMakey</title>
+<title>Game Room – MakeyMakey</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;background:#0a140a;color:#f0f0f0;}
@@ -66,11 +66,9 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
   padding:14px;border-radius:24px;
   background:rgba(0,0,0,0.5);backdrop-filter:blur(10px);
   touch-action:none;user-select:none;-webkit-user-select:none;
-  cursor:grab;
   box-shadow:0 4px 20px rgba(0,0,0,0.5);
   border:1px solid rgba(34,197,94,0.2);
 }
-#touchControls:active{cursor:grabbing;}
 .touch-row{display:flex;gap:10px;}
 .touch-btn{
   width:82px;height:82px;border:none;border-radius:22px;
@@ -82,13 +80,20 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
   -webkit-tap-highlight-color:transparent;
 }
 .touch-btn:active{transform:scale(0.94);background:rgba(34,197,94,0.3);}
+#touchDragHandle{
+  width:100%;padding:9px 14px;border-radius:16px;
+  background:rgba(255,255,255,0.08);color:#86efac;
+  font-size:13px;letter-spacing:1px;text-align:center;
+  cursor:grab;touch-action:none;-webkit-tap-highlight-color:transparent;
+}
+#touchDragHandle:active{cursor:grabbing;background:rgba(255,255,255,0.14);}
 .space-btn{width:174px;font-size:18px;}
 </style>
 </head>
 <body>
 
-<a id="homeBtn" href="index.html">🏠 Spelrummet</a>
-<button id="staffBtn" onclick="toggleStaff()">🔑 Personal</button>
+<a id="homeBtn" href="index.html">🏠 Game Room</a>
+<button id="staffBtn" onclick="toggleStaff()">🔑 Staff</button>
 
 <div id="bg">
   <div class="orb" style="width:600px;height:600px;background:#059669;top:-150px;left:-150px;animation-duration:17s;"></div>
@@ -104,11 +109,11 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
     </div>
   </div>
   <div class="key-display">
-    <span class="key">↑ Upp</span>
-    <span class="key">↓ Ned</span>
-    <span class="key">← Vänster</span>
-    <span class="key">→ Höger</span>
-    <span class="key">⎵ Mellanslag</span>
+    <span class="key">↑ Up</span>
+    <span class="key">↓ Down</span>
+    <span class="key">← Left</span>
+    <span class="key">→ Right</span>
+    <span class="key">⎵ Space</span>
     <span class="key">↵ Enter</span>
   </div>
   <div class="cat-scroll" id="catList"></div>
@@ -127,7 +132,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
 <div class="view" id="viewGame">
   <div class="top-bar">
     <button class="back-btn" onclick="showCats()">🏠</button>
-    <button class="back-btn" onclick="closeGame()">← Tillbaka</button>
+    <button class="back-btn" onclick="closeGame()">← Back</button>
     <span class="bar-title" id="gameBarTitle"></span>
   </div>
   <iframe id="gameFrame" allowfullscreen></iframe>
@@ -139,8 +144,8 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
   <div style="background:#0a1a0a;border:1.5px solid rgba(34,197,94,0.3);border-radius:20px;
     padding:28px 24px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:14px;">
     <div id="modalTitle" style="font-size:clamp(16px,3vw,22px);font-weight:900;color:#fff;text-align:center;"></div>
-    <div style="font-size:13px;color:#666;text-align:center;">Ange lösenord för att lägga till spel</div>
-    <input type="password" id="modalPwd" placeholder="Lösenord"
+    <div style="font-size:13px;color:#666;text-align:center;">Enter password to add a game</div>
+    <input type="password" id="modalPwd" placeholder="Password"
       style="background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.12);
         border-radius:10px;padding:12px 14px;font-size:16px;color:#fff;
         outline:none;font-family:inherit;width:100%;">
@@ -148,7 +153,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-sy
       <button onclick="submitUploadModal()"
         style="flex:1;font-weight:700;font-size:15px;border:none;border-radius:10px;
           padding:12px;cursor:pointer;background:linear-gradient(135deg,#059669,#34d399);color:#fff;">
-        ✅ Gå vidare
+        ✅ Continue
       </button>
       <button onclick="closeUploadModal()"
         style="font-weight:700;font-size:15px;border:none;border-radius:10px;
@@ -173,39 +178,37 @@ const GAME_B64 = {
 };
 
 const GAMES = [
-  {id:"snake",name:"Snake",emoji:"🐍",desc:"Styr ormen med ↑↓←→",category:"pilar"},
-  {id:"labyrint",name:"Labyrint",emoji:"🗺️",desc:"3 banor — ta dig till målet",category:"pilar"},
-  {id:"racer",name:"Racerbana",emoji:"🏎️",desc:"Top-view bil — styr med ←→",category:"pilar"},
-  {id:"shooter",name:"Rymdskjutaren",emoji:"🚀",desc:"← → rotera · ↑/SPACE skjuta",category:"pilar"},
-  {id:"reaktion",name:"Reaktionsspel",emoji:"⚡",desc:"Solo, Duell eller Riktning",category:"mellanslag"},
-  {id:"collect",name:"Samla Stjärnor",emoji:"⭐",desc:"Samla ⭐ — bomber exploderar 💥",category:"action"},
-  {id:"dodge",name:"Dodge",emoji:"🚗",desc:"Undvik hinder med ←→",category:"action"},
-  {id:"jigsawplanet",name:"Jigsawplanet",emoji:"🧩",desc:"Skapa och lös pussel av egna bilder!",category:"webb",url:"https://www.jigsawplanet.com"},
-  {id:"thissand",name:"This is Sand",emoji:"⏳",desc:"Rita med sand i olika färger!",category:"webb",url:"https://thisissand.com"},
-  {id:"musiclab",name:"Chrome Music Lab",emoji:"🎵",desc:"Utforska musik och ljud!",category:"webb",url:"https://musiclab.chromeexperiments.com"},
-  {id:"sketchpad",name:"Sketchpad",emoji:"🎨",desc:"Rita fritt med penslar och färger",category:"webb",url:"https://sketch.io/sketchpad"},
+  // TODO: swap in translated GAME_B64 entries as each game file arrives
+  {id:"snake",name:"Snake",emoji:"🐍",desc:"Control the snake with ↑↓←→",category:"pilar"},
+  {id:"labyrint",name:"Maze",emoji:"🗺️",desc:"3 tracks — reach the goal",category:"pilar"},
+  {id:"racer",name:"Race Track",emoji:"🏎️",desc:"Top-view car — steer with ←→",category:"pilar"},
+  {id:"shooter",name:"Space Shooter",emoji:"🚀",desc:"← → rotate · ↑/SPACE shoot",category:"pilar"},
+  {id:"reaktion",name:"Reaction Game",emoji:"⚡",desc:"Solo, Duel or Direction",category:"mellanslag"},
+  {id:"collect",name:"Collect Stars",emoji:"⭐",desc:"Collect ⭐ — bombs explode 💥",category:"action"},
+  {id:"dodge",name:"Dodge",emoji:"🚗",desc:"Avoid obstacles with ←→",category:"action"},
+  {id:"jigsawplanet",name:"Jigsawplanet",emoji:"🧩",desc:"Create and solve puzzles from your own pictures!",category:"webb",url:"https://www.jigsawplanet.com"},
+  {id:"thissand",name:"This is Sand",emoji:"⏳",desc:"Draw with sand in different colors!",category:"webb",url:"https://thisissand.com"},
+  {id:"musiclab",name:"Chrome Music Lab",emoji:"🎵",desc:"Explore music and sound!",category:"webb",url:"https://musiclab.chromeexperiments.com"},
+  {id:"sketchpad",name:"Sketchpad",emoji:"🎨",desc:"Draw freely with brushes and colors",category:"webb",url:"https://sketch.io/sketchpad"},
 ];
 
 
 const CATEGORIES = [
-  {id:'pilar',       name:'Piltangenter',      icon:'⬆️', color:'#22c55e',
-   desc:'↑ ↓ ← → styr spelet',
+  {id:'pilar',       name:'Arrow Keys',        icon:'⬆️', color:'#22c55e',
+   desc:'↑ ↓ ← → control the game',
    bg:'linear-gradient(135deg,#14532d,#15803d)'},
   {id:'sonar',       name:'Sonar',              icon:'📡', color:'#818cf8',
-   desc:'Ljudbaserade spel — spelas med öronen',
+   desc:'Sound-based games — played by ear',
    bg:'linear-gradient(135deg,#1e1b4b,#3730a3)'},
-  {id:'mellanslag',  name:'Mellanslag & Enter', icon:'⎵',  color:'#4ade80',
-   desc:'Tryck för att agera',
+  {id:'mellanslag',  name:'Space & Enter',      icon:'⎵',  color:'#4ade80',
+   desc:'Press to act',
    bg:'linear-gradient(135deg,#064e3b,#059669)'},
-  {id:'action',      name:'Kombination',        icon:'🎮', color:'#34d399',
-   desc:'Piltangenter + action-knappar',
+  {id:'action',      name:'Combination',        icon:'🎮', color:'#34d399',
+   desc:'Arrow keys + action buttons',
    bg:'linear-gradient(135deg,#0f4c35,#10b981)'},
-  {id:'webb',        name:'Webb & Aktiviteter', icon:'🌐', color:'#06b6d4',
-   desc:'Jigsawplanet, This is Sand och fler',
+  {id:'webb',        name:'Web & Activities',   icon:'🌐', color:'#06b6d4',
+   desc:'Jigsawplanet, This is Sand and more',
    bg:'linear-gradient(135deg,#164e63,#0e7490)'},
-  {id:'deltagarspel',name:'Deltagarspel',       icon:'⭐', color:'#86efac',
-   desc:'Spel byggda av deltagarna',
-   bg:'linear-gradient(135deg,#0a2e1a,#16a34a)'},
 ];
 
 let currentBlob = null;
@@ -217,7 +220,7 @@ function buildCats(){
 
   CATEGORIES.forEach(function(cat){
     const games = GAMES.filter(function(g){ return g.category===cat.id && !hiddenGames.has(g.id); });
-    const allowEmpty = cat.id==='deltagarspel' || cat.id==='webb' || cat.id==='sonar';
+    const allowEmpty = cat.id==='webb' || cat.id==='sonar';
     if(games.length===0 && !allowEmpty) return;
 
     const btn = document.createElement('div');
@@ -229,7 +232,7 @@ function buildCats(){
       '<div class="cat-btn-icon">'+cat.icon+'</div>'+
       '<div>'+
         '<div class="cat-btn-name" style="color:'+cat.color+'">'+cat.name+'</div>'+
-        '<div class="cat-btn-count">'+cat.desc+(count?' &nbsp;·&nbsp; '+count+' spel':' &nbsp;·&nbsp; Inga spel ännu')+'</div>'+
+        '<div class="cat-btn-count">'+cat.desc+(count?' &nbsp;·&nbsp; '+count+' games':' &nbsp;·&nbsp; No games yet')+'</div>'+
       '</div>';
     btn.addEventListener('click',function(){ showGames(cat); });
     btn.addEventListener('touchend',function(e){ e.preventDefault(); showGames(cat); });
@@ -238,7 +241,7 @@ function buildCats(){
 
   // Checklist link
   var how = document.createElement('a');
-  how.href = 'https://sukrutaraj.github.io/checklist-pages/checklist-1788262633006.html';
+  how.href = 'https://sukrutaraj.github.io/checklist-pages/checklist-1788262633006.html'; // TODO: swap for English checklist URL once ready
   how.target = '_blank';
   how.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:8px;'+
     'background:rgba(34,197,94,0.08);border:1.5px solid rgba(34,197,94,0.25);'+
@@ -246,8 +249,8 @@ function buildCats(){
     'transition:background .15s;width:100%;max-width:500px;';
   how.innerHTML =
     '<div style="font-size:22px;">📋</div>'+
-    '<div style="font-size:15px;font-weight:700;color:#4ade80;">Hur skapar man ett spel?</div>'+
-    '<div style="font-size:12px;color:#555;text-align:center;">Steg-för-steg checklistan</div>';
+    '<div style="font-size:15px;font-weight:700;color:#4ade80;">How do you create a game?</div>'+
+    '<div style="font-size:12px;color:#555;text-align:center;">The step-by-step checklist</div>';
   list.appendChild(how);
 }
 
@@ -261,14 +264,14 @@ function showGames(cat){
     var card = document.createElement('div');
     card.className = 'game-card';
     card.style.borderColor = cat.color+'30';
-    var isDeltagar = g.category==='deltagarspel';
+    var isDeltagar = g.isNew===true;
     var folder = isDeltagar ? 'deltagarspel_makey' : '';
     card.innerHTML =
       (g.isNew?'<div class="card-new">NY!</div>':'')+
       '<div class="card-emoji">'+g.emoji+'</div>'+
       '<div class="card-name" style="color:'+cat.color+'">'+g.name+'</div>'+
       '<div class="card-desc">'+g.desc+'</div>'+
-      (staffMode ? '<button class="card-del" title="Ta bort">🗑</button>' : '');
+      (staffMode ? '<button class="card-del" title="Remove">🗑</button>' : '');
     card.addEventListener('click', function(e){
       if(e.target.classList.contains('card-del')) return;
       openGame(g);
@@ -285,7 +288,7 @@ function showGames(cat){
           deleteGame(g.id, folder, g.file||'');
         } else {
           // Built-in game: hide locally until page reload
-          if(confirm('Dölj "'+g.name+'" från listan? (Syns igen vid omladdning)')){
+          if(confirm('Hide "'+g.name+'" from the list? (Reappears on reload)')){
             hiddenGames.add(g.id);
             showGames(currentCat);
           }
@@ -301,8 +304,8 @@ function showGames(cat){
   add.style.cssText = 'cursor:pointer;border-color:'+cat.color+'40;border-style:dashed;background:rgba(255,255,255,0.03);';
   add.innerHTML =
     '<div class="card-emoji" style="font-size:clamp(24px,4vw,42px);opacity:0.5;">➕</div>'+
-    '<div class="card-name" style="color:'+cat.color+';opacity:0.7;">Lägg till spel</div>'+
-    '<div class="card-desc" style="color:#555;">Ladda upp ett spel</div>';
+    '<div class="card-name" style="color:'+cat.color+';opacity:0.7;">Add game</div>'+
+    '<div class="card-desc" style="color:#555;">Upload a game</div>';
   add.addEventListener('click', function(){ showUploadModal(cat); });
   add.addEventListener('touchend', function(e){ e.preventDefault(); showUploadModal(cat); });
   grid.appendChild(add);
@@ -316,7 +319,7 @@ function showGames(cat){
 function openGame(g){
   if(g.url){ window.open(g.url,'_blank'); return; }
   var b64 = GAME_B64[g.id] || g.b64;
-  if(!b64){ alert('Spelet saknas!'); return; }
+  if(!b64){ alert('Game not found!'); return; }
   var html = decodeURIComponent(escape(atob(b64)));
   if(currentBlob) URL.revokeObjectURL(currentBlob);
   var blob = new Blob([html],{type:'text/html;charset=utf-8'});
@@ -350,7 +353,7 @@ var _UPLOAD_HASH = '705';
 function showUploadModal(cat){
   _uploadCat = cat;
   var title = document.getElementById('modalTitle');
-  if(title) title.textContent = '➕ Lägg till i ' + cat.name;
+  if(title) title.textContent = '➕ Add to ' + cat.name;
   var pwd = document.getElementById('modalPwd');
   if(pwd){ pwd.value=''; setTimeout(function(){pwd.focus();},150); }
   var err = document.getElementById('modalErr');
@@ -365,7 +368,7 @@ function submitUploadModal(){
   var pwd = document.getElementById('modalPwd').value;
   var h = String(pwd.split('').reduce(function(a,ch){return a+ch.charCodeAt(0);},0));
   if(h !== _UPLOAD_HASH){
-    document.getElementById('modalErr').textContent='❌ Fel lösenord!';
+    document.getElementById('modalErr').textContent='❌ Wrong password!';
     document.getElementById('modalPwd').value='';
     return;
   }
@@ -379,8 +382,8 @@ function submitUploadModal(){
 })();
 
 /* ── Delete deltagarspel ── */
-var DEL_OBF  = [53,7,28,54,5,7,4,118,87,39,44,88,94,22,120,127,6,85,97,40,56,31,63,100,0,104,98,101,42,88,93,87,105,85,3,5,98,1,5,49];
-var DEL_HASH = '705';
+var DEL_OBF  = [33,29,30,109,82,5,1,0,19,27,113,4,5,71,14,57,88,86,3,117,98,48,45,58,1,104,97,1,3,65,90,2,105,84,5,114,69,0,91,104];
+var DEL_HASH = '499';
 function delDecodeToken(pwd){
   return DEL_OBF.map(function(b,i){ return String.fromCharCode(b^pwd.charCodeAt(i%pwd.length)); }).join('');
 }
@@ -389,13 +392,13 @@ function delCheckPwd(pwd){
   return h===DEL_HASH;
 }
 function deleteGame(gameId,folder,filename){
-  if(!filename){alert('Filnamn saknas.');return;}
-  var pwd=prompt('Ange lösenord för att ta bort spelet:');
+  if(!filename){alert('Filename missing.');return;}
+  var pwd=prompt('Enter password to delete the game:');
   if(!pwd) return;
-  if(!delCheckPwd(pwd)){alert('Fel lösenord!');return;}
-  if(!confirm('Ta bort spelet permanent?')) return;
+  if(!delCheckPwd(pwd)){alert('Wrong password!');return;}
+  if(!confirm('Delete the game permanently?')) return;
   var token=delDecodeToken(pwd);
-  var REPO='sukrutaraj/Spelrum';
+  var REPO='sukrutaraj/Game_room';
   var BRANCH='main';
   function getFileSHA(path){
     return fetch('https://api.github.com/repos/'+REPO+'/contents/'+path+'?ref='+BRANCH,{
@@ -410,7 +413,7 @@ function deleteGame(gameId,folder,filename){
       return fetch('https://api.github.com/repos/'+REPO+'/contents/'+path,{
         method:'DELETE',
         headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
-        body:JSON.stringify({message:'Ta bort: '+filename,sha:sha,branch:BRANCH})
+        body:JSON.stringify({message:'Delete: '+filename,sha:sha,branch:BRANCH})
       });
     });
   }
@@ -427,17 +430,17 @@ function deleteGame(gameId,folder,filename){
     if(meta) return deleteFile(folder+'/'+meta.name);
   })
   .then(function(){
-    alert('Spelet har tagits bort!');
+    alert('The game has been removed!');
     var idx=GAMES.findIndex(function(g){return g.id===gameId;});
     if(idx>=0){GAMES.splice(idx,1);delete GAME_B64[gameId];}
     if(currentCat) showGames(currentCat);
   })
-  .catch(function(e){alert('Kunde inte ta bort: '+e.message);});
+  .catch(function(e){alert('Could not delete: '+e.message);});
 }
 
 /* ── Fetch deltagarspel from GitHub ── */
 async function fetchDeltagar(folder){
-  var REPO='sukrutaraj/Spelrum';
+  var REPO='sukrutaraj/Game_room';
   var BASE='https://raw.githubusercontent.com/'+REPO+'/main/';
   var API='https://api.github.com/repos/'+REPO+'/contents/'+folder+'?ref=main';
   try{
@@ -455,8 +458,8 @@ async function fetchDeltagar(folder){
         if(GAMES.find(function(g){return g.id===gid;})) continue;
         if(meta.url){
           GAMES.push({id:gid,name:meta.name,emoji:meta.emoji||'🔗',
-            desc:meta.desc||meta.name,category:meta.cat||'deltagarspel',
-            cat:meta.cat||'deltagarspel',url:meta.url,file:'',isNew:true});
+            desc:meta.desc||meta.name,category:meta.cat||'webb',
+            cat:meta.cat||'webb',url:meta.url,file:'',isNew:true});
           continue;
         }
         var htmlFile=files.find(function(f){return f.name===meta.file;});
@@ -466,11 +469,11 @@ async function fetchDeltagar(folder){
         var htmlContent=await hr.text();
         GAME_B64[gid]=btoa(unescape(encodeURIComponent(htmlContent)));
         GAMES.push({id:gid,name:meta.name,emoji:meta.emoji||'🎮',desc:meta.desc||meta.name,
-          category:meta.cat||'deltagarspel',cat:meta.cat||'deltagarspel',url:'',file:meta.file||'',isNew:true});
-      }catch(e){console.warn('Spel ej laddat:',mf.name,e);}
+          category:meta.cat||'webb',cat:meta.cat||'webb',url:'',file:meta.file||'',isNew:true});
+      }catch(e){console.warn('Game not loaded:',mf.name,e);}
     }
-    if(currentCat&&currentCat.id==='deltagarspel') showGames(currentCat);
-    else buildCats();
+    buildCats();
+    if(currentCat) showGames(currentCat);
   }catch(e){console.warn('GitHub fetch failed:',e);}
 }
 
@@ -478,29 +481,29 @@ async function fetchDeltagar(folder){
 /* ── Staff mode ── */
 var staffMode  = false;
 var hiddenGames = new Set();
-var STAFF_HASH  = '705'; // same password: Rolig0301
+var STAFF_HASH  = '499'; // password: Fun2026
 
 function toggleStaff(){
   if(staffMode){
     // Log out
     staffMode = false;
-    document.getElementById('staffBtn').textContent = '🔑 Personal';
+    document.getElementById('staffBtn').textContent = '🔑 Staff';
     document.getElementById('staffBtn').classList.remove('active');
     if(currentCat) showGames(currentCat);
     return;
   }
   // Log in
-  var pwd = prompt('Lösenord för personal:');
+  var pwd = prompt('Staff password:');
   if(!pwd) return;
   var h = String(pwd.split('').reduce(function(a,ch){return a+ch.charCodeAt(0);},0));
   if(h !== STAFF_HASH){
-    alert('Fel lösenord!');
+    alert('Wrong password!');
     return;
   }
   staffMode = true;
-  document.getElementById('staffBtn').textContent = '🔒 Logga ut';
+  document.getElementById('staffBtn').textContent = '🔒 Log out';
   document.getElementById('staffBtn').classList.add('active');
-  alert('Personal-läge aktiverat. Nu syns 🗑️ på alla spelkort.');
+  alert('Staff mode activated. 🗑️ now shows on all game cards.');
   if(currentCat) showGames(currentCat);
 }
 
@@ -512,7 +515,16 @@ var controlsVisible = false;
 
 function toggleTouch(){
   controlsVisible = !controlsVisible;
-  document.getElementById('touchControls').style.display = controlsVisible ? 'flex' : 'none';
+  var tc = document.getElementById('touchControls');
+  if(controlsVisible){
+    tc.style.display = 'flex';
+    if(!tc.style.left || tc.style.left === ''){
+      tc.style.left = '40px';
+      tc.style.top  = '40px';
+    }
+  } else {
+    tc.style.display = 'none';
+  }
 }
 
 function fireKey(key){
@@ -528,53 +540,64 @@ function fireKey(key){
   }catch(e){}
 }
 
-document.querySelectorAll('.touch-btn').forEach(function(btn){
-  btn.addEventListener('pointerdown', function(e){
-    e.preventDefault(); e.stopPropagation();
-    fireKey(btn.dataset.key);
-    btn.style.transform='scale(0.94)';
-    setTimeout(function(){btn.style.transform='';},120);
-  },{passive:false});
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.touch-btn').forEach(function(btn){
+    btn.addEventListener('pointerdown', function(e){
+      e.preventDefault(); e.stopPropagation();
+      fireKey(btn.dataset.key);
+      btn.style.transform='scale(0.94)';
+      setTimeout(function(){btn.style.transform='';},120);
+    },{passive:false});
+  });
 });
 
-/* Drag — whole panel is draggable */
-(function(){
+/* Drag — grab the dedicated handle bar to move the whole panel.
+   Deferred until DOMContentLoaded because this script runs before
+   the touch-controls HTML (further down the page) has been parsed. */
+document.addEventListener('DOMContentLoaded', function(){
   var tc = document.getElementById('touchControls');
+  var handle = document.getElementById('touchDragHandle');
+  if(!tc || !handle) return;
   var dragging=false, startX=0, startY=0, startL=0, startT=0;
-  var moved=false;
 
-  tc.addEventListener('pointerdown',function(e){
-    // Don't start drag if pressing a game button
-    if(e.target.classList.contains('touch-btn')) return;
-    e.preventDefault();
-    dragging=true; moved=false;
-    tc.setPointerCapture(e.pointerId);
+  handle.addEventListener('pointerdown',function(e){
+    e.preventDefault(); e.stopPropagation();
+    dragging=true;
+    handle.setPointerCapture(e.pointerId);
     var r=tc.getBoundingClientRect();
     startL=r.left; startT=r.top;
     startX=e.clientX; startY=e.clientY;
-    tc.style.cursor='grabbing';
+    handle.style.cursor='grabbing';
   },{passive:false});
 
-  tc.addEventListener('pointermove',function(e){
+  window.addEventListener('pointermove',function(e){
     if(!dragging) return;
     e.preventDefault();
     var dx=e.clientX-startX, dy=e.clientY-startY;
-    if(Math.abs(dx)>5||Math.abs(dy)>5) moved=true;
     var nl=Math.max(0,Math.min(window.innerWidth-tc.offsetWidth, startL+dx));
     var nt=Math.max(0,Math.min(window.innerHeight-tc.offsetHeight, startT+dy));
     tc.style.left=nl+'px'; tc.style.top=nt+'px';
   },{passive:false});
 
-  function stop(){ dragging=false; tc.style.cursor='grab'; }
-  tc.addEventListener('pointerup',stop);
-  tc.addEventListener('pointercancel',stop);
-})();
+  function stop(){ dragging=false; handle.style.cursor='grab'; }
+  window.addEventListener('pointerup',stop);
+  window.addEventListener('pointercancel',stop);
+
+  /* Keep controls above the game iframe, even in fullscreen */
+  tc.style.zIndex='999999';
+  document.getElementById('touchToggle').style.zIndex='999999';
+
+  /* Prevent browser pinch/scroll gestures from hijacking the panel */
+  tc.addEventListener('gesturestart',function(e){ e.preventDefault(); });
+  tc.addEventListener('touchstart',function(e){ e.stopPropagation(); },{passive:false});
+});
 
 </script>
 
 <button id="touchToggle" onclick="toggleTouch()">🎮 Touch</button>
 
 <div id="touchControls">
+  <div id="touchDragHandle">✥ Drag</div>
   <div class="touch-row">
     <button class="touch-btn" data-key="ArrowUp">↑</button>
   </div>
