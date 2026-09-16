@@ -512,7 +512,15 @@ var controlsVisible = false;
 
 function toggleTouch(){
   controlsVisible = !controlsVisible;
-  document.getElementById('touchControls').style.display = controlsVisible ? 'flex' : 'none';
+  var tc = document.getElementById('touchControls');
+  if(controlsVisible){
+    tc.style.display = 'flex';
+    if(!tc.style.left || tc.style.left===''){
+      tc.style.left='40px'; tc.style.top='40px';
+    }
+  } else {
+    tc.style.display = 'none';
+  }
 }
 
 function fireKey(key){
