@@ -539,14 +539,7 @@ function fireKey(key){
   }catch(e){}
 }
 
-document.querySelectorAll('.touch-btn').forEach(function(btn){
-  btn.addEventListener('pointerdown', function(e){
-    e.preventDefault(); e.stopPropagation();
-    fireKey(btn.dataset.key);
-    btn.style.transform='scale(0.94)';
-    setTimeout(function(){btn.style.transform='';},120);
-  },{passive:false});
-});
+
 
 /* Drag — whole panel is draggable */
 (function(){
@@ -614,10 +607,22 @@ document.querySelectorAll('.touch-btn').forEach(function(btn){
 
 <script>
 (function(){
+  // Button listeners — must run after HTML is parsed
+  document.querySelectorAll('.touch-btn').forEach(function(btn){
+    btn.addEventListener('pointerdown', function(e){
+      e.preventDefault(); e.stopPropagation();
+      fireKey(btn.dataset.key);
+      btn.style.transform='scale(0.94)';
+      setTimeout(function(){btn.style.transform='';},120);
+    },{passive:false});
+  });
+
+  // Drag via handle
   var tc     = document.getElementById('touchControls');
   var handle = document.getElementById('touchDragHandle');
-  if(!tc || !handle){ console.warn('drag: element not found'); return; }
+  if(!tc || !handle) return;
   var dragging=false, startX=0, startY=0, startL=0, startT=0;
+
   handle.addEventListener('pointerdown',function(e){
     e.preventDefault(); e.stopPropagation();
     dragging=true;
@@ -627,6 +632,7 @@ document.querySelectorAll('.touch-btn').forEach(function(btn){
     startX=e.clientX; startY=e.clientY;
     handle.style.cursor='grabbing';
   },{passive:false});
+
   window.addEventListener('pointermove',function(e){
     if(!dragging) return;
     e.preventDefault();
@@ -634,6 +640,7 @@ document.querySelectorAll('.touch-btn').forEach(function(btn){
     tc.style.left=Math.max(0,Math.min(window.innerWidth-tc.offsetWidth,startL+dx))+'px';
     tc.style.top =Math.max(0,Math.min(window.innerHeight-tc.offsetHeight,startT+dy))+'px';
   },{passive:false});
+
   function stop(){ dragging=false; handle.style.cursor='grab'; }
   window.addEventListener('pointerup',stop);
   window.addEventListener('pointercancel',stop);
