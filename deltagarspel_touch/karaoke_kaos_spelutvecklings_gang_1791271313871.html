@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Karaoke-kaos v9</title>
+<style>
+:root{--bg:#f4f5f7;--panel:#fff;--ink:#17191d;--muted:#666b73;--line:#d9dce1;--green:#1f9d55;--red:#d64545;--yellow:#e8b923;--blue:#2e6bd6}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:var(--ink);background:var(--bg)}
+button,input,textarea{font:inherit}button{touch-action:manipulation;cursor:pointer}
+#app{height:100vh;display:flex;flex-direction:column}
+.topbar{height:82px;flex:0 0 82px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;padding:8px 18px;background:#fff;border-bottom:2px solid var(--line)}
+.team{display:flex;align-items:center;gap:12px;min-width:0}.team.right{justify-content:flex-end;text-align:right}.teamName{font-size:24px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brand{text-align:center;font-size:23px;font-weight:900;white-space:nowrap}.roundLabel{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px}.scoreBubble{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:#111;color:#fff;font-size:25px;font-weight:900;flex:0 0 54px}
+main{flex:1;min-height:0;display:grid;place-items:center;padding:16px}.screen{width:min(100%,1120px);height:100%;display:none;place-items:center}.screen.active{display:grid}
+.card{width:min(100%,920px);max-height:100%;overflow:hidden;background:var(--panel);border:2px solid var(--line);border-radius:26px;padding:22px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,.06)}
+.kicker{font-size:13px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.7px}h1{font-size:42px;margin:8px 0 10px}h2{font-size:32px;margin:8px 0 14px}p{font-size:20px;line-height:1.35;margin:8px auto;max-width:760px}
+.teamForm{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px auto;max-width:720px}.nameInput{width:100%;padding:15px 18px;border:2px solid var(--line);border-radius:18px;font-size:20px;text-align:center;outline:none}.nameInput:focus{border-color:var(--blue)}
+.modeGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:860px;margin:14px auto}.modeBtn{min-height:120px;border:2px solid var(--line);background:#fff;border-radius:22px;padding:14px;font-weight:800;font-size:20px}.modeBtn.selected{border-color:#111;box-shadow:inset 0 0 0 3px #111;background:#f7f7f7}.modeBtn .emoji{font-size:36px;display:block;margin-bottom:6px}.modeBtn .desc{font-size:14px;font-weight:500;color:var(--muted);display:block;margin-top:5px}
+.listBox{display:none;max-width:820px;margin:12px auto 8px;text-align:left}.listBox.show{display:block}.songInput{width:100%;height:150px;resize:none;border:2px solid var(--line);border-radius:18px;padding:14px 16px;font-size:18px;line-height:1.45;outline:none}.songInput:focus{border-color:var(--blue)}.listHint{margin-top:7px;font-size:14px;color:var(--muted)}
+.actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:18px}.roundBtn{min-width:150px;min-height:96px;border:0;border-radius:28px;padding:14px 20px;font-size:20px;font-weight:900;line-height:1.05;color:#fff;box-shadow:0 3px 8px rgba(0,0,0,.12)}.roundBtn.green{background:var(--green)}.roundBtn.red{background:var(--red)}.roundBtn.yellow{background:var(--yellow);color:#17191d}.roundBtn.blue{background:var(--blue)}.roundBtn.wide{min-width:230px}
+.songTitle{font-size:42px;font-weight:900;margin:10px 0 0;display:inline-flex;align-items:center;gap:12px}.iconReroll{width:58px;height:58px;border:0;border-radius:50%;background:#ffd34d;font-size:30px;font-weight:900;cursor:pointer;box-shadow:0 3px 8px rgba(0,0,0,.12)}.artist{font-size:24px;color:var(--muted);margin:5px 0 14px}.comboBox{display:flex;justify-content:center;align-items:center;gap:12px;margin:16px auto;flex-wrap:wrap}.comboWrap{display:flex;align-items:center;justify-content:center;gap:10px}.comboPart{font-size:25px;font-weight:900;background:#f0f1f3;border:2px solid var(--line);border-radius:22px;padding:14px 20px;max-width:45%}.plus{font-size:30px;font-weight:900}
+/* Startskärmen måste rymma även egen låtlista/blanda på Samsung Flip */
+#startScreen .card{padding:18px 22px}
+#startScreen h1{font-size:38px;margin:5px 0 7px}
+#startScreen p{font-size:18px;margin:5px auto 8px}
+#startScreen .teamForm{margin:10px auto}
+#startScreen .modeGrid{margin:10px auto}
+#startScreen .modeBtn{min-height:105px;padding:10px}
+#startScreen .modeBtn .emoji{font-size:32px;margin-bottom:3px}
+#startScreen .listBox{margin:9px auto 5px}
+#startScreen .songInput{height:115px;padding:10px 14px;font-size:17px}
+#startScreen .listHint{margin-top:4px;font-size:13px}
+#startScreen .readRow{display:inline-block;margin:8px 5px 0}
+#startScreen .actions{display:inline-flex;margin-top:8px;vertical-align:top}
+#startScreen .roundBtn{min-height:72px}
+#startScreen .help{margin-top:6px;font-size:13px}
+.help{font-size:15px;color:var(--muted);margin:12px auto 0;max-width:760px;line-height:1.35}.readRow{margin-top:10px}.readBtn{border:2px solid var(--line);background:#fff;border-radius:20px;padding:10px 18px;font-size:17px;font-weight:800}
+.scoreGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:820px;margin:16px auto}.scoreItem{border:2px solid var(--line);border-radius:20px;padding:14px}.scoreItem strong{display:block;font-size:18px;min-height:42px}.scoreBtns{display:flex;justify-content:center;gap:7px;margin-top:10px;flex-wrap:wrap}.scoreBtn{width:48px;height:48px;border-radius:50%;border:2px solid var(--line);background:#fff;font-size:18px;font-weight:900}.scoreBtn.selected{background:#111;color:#fff;border-color:#111}.scoreTotal{font-size:25px;font-weight:900;margin:10px}.challenge{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0;font-size:18px}.pill{background:#f0f1f3;border:2px solid var(--line);border-radius:18px;padding:9px 13px;font-weight:800}
+.results{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:700px;margin:20px auto}.resultTeam{border:2px solid var(--line);border-radius:22px;padding:18px}.resultTeam .big{font-size:54px;font-weight:900;margin-top:8px}#toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);background:#111;color:#fff;padding:12px 18px;border-radius:18px;font-weight:800;opacity:0;pointer-events:none;transition:.2s;z-index:20}#toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:760px){.topbar{height:70px;flex-basis:70px;padding:6px 10px;gap:7px}.teamName{font-size:17px}.scoreBubble{width:44px;height:44px;flex-basis:44px;font-size:20px}.brand{font-size:17px}.roundLabel{font-size:10px}main{padding:8px}.card{padding:16px;border-radius:20px}h1{font-size:30px}h2{font-size:25px}p{font-size:17px}.teamForm,.modeGrid,.scoreGrid,.results{grid-template-columns:1fr 1fr}.modeGrid{gap:8px}.modeBtn{min-height:95px;font-size:16px;padding:9px}.modeBtn .emoji{font-size:28px}.modeBtn .desc{font-size:12px}.songInput{height:125px;font-size:16px}.roundBtn{min-width:125px;min-height:78px;font-size:17px;border-radius:23px}.songTitle{font-size:32px}.artist{font-size:20px}.comboPart{font-size:20px;padding:11px 14px}.scoreItem{padding:10px}.scoreItem strong{font-size:15px}.scoreBtn{width:42px;height:42px}.iconReroll{width:50px;height:50px;font-size:25px}}
+
+/* ===== KARAOKE-KAOS v8 : PARTY / GAMESHOW THEME ===== */
+:root{
+ --bg:#090b18;--panel:rgba(20,23,43,.92);--ink:#f8f8ff;--muted:#b7bbd2;--line:rgba(255,255,255,.14);
+ --green:#39e58c;--red:#ff5470;--yellow:#ffd45a;--blue:#57a8ff;--purple:#a66cff;--pink:#ff55c8;
+}
+html,body{background:#090b18!important;color:var(--ink)!important}
+body{background:
+ radial-gradient(circle at 15% 15%,rgba(87,168,255,.18),transparent 28%),
+ radial-gradient(circle at 85% 12%,rgba(255,85,200,.16),transparent 27%),
+ radial-gradient(circle at 50% 110%,rgba(166,108,255,.20),transparent 35%),#090b18!important;}
+#app{position:relative;background:transparent!important}
+#app:before,#app:after{content:"";position:fixed;top:-20%;width:28vw;height:150vh;pointer-events:none;filter:blur(22px);opacity:.16;transform:rotate(18deg);background:linear-gradient(to bottom,transparent,rgba(87,168,255,.8),transparent);animation:laserSweep 9s ease-in-out infinite alternate;z-index:0}
+#app:before{left:8%}#app:after{right:8%;transform:rotate(-18deg);background:linear-gradient(to bottom,transparent,rgba(255,85,200,.8),transparent);animation-delay:-3s}
+.card,.team,.brand,.roundLabel{position:relative;z-index:1}
+.card{background:linear-gradient(145deg,rgba(27,31,58,.96),rgba(13,16,31,.94))!important;border:1px solid rgba(255,255,255,.13)!important;box-shadow:0 18px 55px rgba(0,0,0,.42),0 0 30px rgba(166,108,255,.08)!important}
+.brand{color:#fff!important;text-shadow:0 0 18px rgba(255,85,200,.55),0 0 35px rgba(87,168,255,.3)}
+.roundLabel{color:#dfe4ff!important}
+.teamName{color:#fff!important}.scoreBubble{box-shadow:0 0 18px rgba(87,168,255,.24)!important}
+.kicker{color:#9fa8d1!important;letter-spacing:.14em!important}
+.songTitle,h1,h2,h3{color:#fff!important;text-shadow:0 0 16px rgba(166,108,255,.22)}
+.artist,.muted,.listHint,.help{color:var(--muted)!important}
+.modeBtn{background:rgba(255,255,255,.06)!important;color:#fff!important;border-color:rgba(255,255,255,.15)!important;transition:.2s transform,.2s box-shadow,.2s background}
+.modeBtn:hover,.modeBtn.selected{background:linear-gradient(135deg,rgba(87,168,255,.24),rgba(255,85,200,.22))!important;border-color:rgba(255,255,255,.3)!important;box-shadow:0 0 24px rgba(166,108,255,.22)!important;transform:translateY(-2px)}
+.listBox{background:rgba(0,0,0,.2)!important;border-color:rgba(255,255,255,.12)!important}
+textarea,input{background:rgba(255,255,255,.06)!important;color:#fff!important;border-color:rgba(255,255,255,.18)!important}
+.nameInput{background:rgba(255,255,255,.06)!important;color:#fff!important;border-color:rgba(255,255,255,.18)!important}.nameInput::placeholder{color:#aeb7dc!important;opacity:1}.nameInput:focus{background:rgba(255,255,255,.10)!important;color:#fff!important;border-color:rgba(87,168,255,.7)!important;box-shadow:0 0 18px rgba(87,168,255,.16)!important}
+button{font-family:inherit}
+.roundBtn{box-shadow:0 10px 28px rgba(0,0,0,.28)!important;transition:transform .18s,box-shadow .18s,filter .18s!important}
+.roundBtn:hover{transform:translateY(-2px) scale(1.015);filter:saturate(1.15);box-shadow:0 0 25px rgba(87,168,255,.28),0 12px 32px rgba(0,0,0,.32)!important}
+.roundBtn.green{background:linear-gradient(135deg,#27c979,#54f0a0)!important;color:#06140d!important}
+.roundBtn.blue{background:linear-gradient(135deg,#3d8df5,#73c1ff)!important;color:#06101c!important}
+.roundBtn.red{background:linear-gradient(135deg,#ef4662,#ff7890)!important}
+.iconReroll{background:rgba(255,255,255,.08)!important;color:#fff!important;border:1px solid rgba(255,255,255,.15)!important;box-shadow:0 0 18px rgba(166,108,255,.12);transition:.25s transform,.25s box-shadow}
+.iconReroll:hover{transform:rotate(180deg);box-shadow:0 0 25px rgba(255,85,200,.35)}
+.comboBox{background:rgba(255,255,255,.045)!important;border-color:rgba(255,255,255,.1)!important}
+.comboPart{background:linear-gradient(135deg,rgba(87,168,255,.22),rgba(166,108,255,.2))!important;border:1px solid rgba(255,255,255,.12)!important;color:#fff!important;box-shadow:0 0 22px rgba(166,108,255,.08)}
+.pill{color:#17191d!important;background:linear-gradient(135deg,#eef2ff,#e7dcff)!important;border-color:rgba(255,255,255,.35)!important;text-shadow:none!important;box-shadow:0 0 14px rgba(166,108,255,.12)}
+/* Samarbetsrundan: mörk text på de ljusa tokversionsrutorna */
+#coopScreen .pill{color:#17191d!important;-webkit-text-fill-color:#17191d!important;background:linear-gradient(135deg,#f3f5ff,#e8dcff)!important;text-shadow:none!important}
+.plus{color:#ffd45a!important;text-shadow:0 0 15px rgba(255,212,90,.5)}
+.readBtn{background:rgba(255,255,255,.06)!important;color:#e8ebff!important;border-color:rgba(255,255,255,.15)!important}
+.scoreItem{background:rgba(255,255,255,.045)!important;border-color:rgba(255,255,255,.1)!important}
+.scoreTotal{background:linear-gradient(135deg,rgba(255,212,90,.16),rgba(255,85,200,.12))!important;border-color:rgba(255,212,90,.25)!important;box-shadow:0 0 28px rgba(255,212,90,.08)}
+.team:first-child .scoreBubble{border-color:rgba(87,168,255,.55)!important;box-shadow:0 0 22px rgba(87,168,255,.24)!important}
+.team.right .scoreBubble{border-color:rgba(255,85,200,.55)!important;box-shadow:0 0 22px rgba(255,85,200,.22)!important}
+/* make important game elements gently alive */
+.brand{animation:brandGlow 4s ease-in-out infinite}
+.songTitle{animation:softPop .45s ease-out}
+.comboPart{animation:comboIn .5s ease-out}
+@keyframes laserSweep{from{opacity:.10;transform:rotate(18deg) translateX(-4vw)}to{opacity:.22;transform:rotate(18deg) translateX(5vw)}}
+@keyframes brandGlow{0%,100%{filter:drop-shadow(0 0 5px rgba(166,108,255,.15))}50%{filter:drop-shadow(0 0 18px rgba(255,85,200,.35))}}
+@keyframes softPop{from{transform:scale(.97);opacity:.4}to{transform:scale(1);opacity:1}}
+@keyframes comboIn{from{transform:scale(.92);opacity:.2}to{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== v9 : TOPBAR KONTRAST ===== */
+.topbar{background:linear-gradient(90deg,rgba(10,14,31,.98),rgba(19,22,43,.98),rgba(30,13,38,.98))!important;border-bottom:1px solid rgba(255,255,255,.14)!important;box-shadow:0 8px 28px rgba(0,0,0,.22)!important;position:relative;z-index:5}
+.topbar .teamName{color:#fff!important;text-shadow:0 0 10px rgba(255,255,255,.10)!important}
+.topbar .brand{color:#fff!important}
+.topbar .roundLabel{color:#b7c0e4!important}
+
+/* ===== v9 : EGNA TOKIGHETER ===== */
+.customBtn{border:2px solid rgba(255,255,255,.16);background:rgba(255,255,255,.07);color:#fff;border-radius:18px;padding:11px 18px;font-weight:900;font-size:17px;box-shadow:0 0 18px rgba(166,108,255,.10);transition:.2s transform,.2s box-shadow,.2s background}
+.customBtn:hover{transform:translateY(-2px);background:linear-gradient(135deg,rgba(166,108,255,.24),rgba(255,85,200,.20));box-shadow:0 0 24px rgba(166,108,255,.22)}
+.customHint{font-size:14px;color:var(--muted);margin:7px auto 0}
+.customModal{position:fixed;inset:0;display:none;place-items:center;padding:18px;background:rgba(3,5,14,.78);backdrop-filter:blur(8px);z-index:50}
+.customModal.show{display:grid}
+.customPanel{width:min(920px,96vw);max-height:92vh;overflow:auto;background:linear-gradient(145deg,#20264a,#0e1225);border:1px solid rgba(255,255,255,.18);border-radius:28px;padding:24px;box-shadow:0 25px 80px rgba(0,0,0,.55),0 0 45px rgba(166,108,255,.18);text-align:center}
+.customPanel h2{margin:0 0 5px;font-size:34px}.customPanel>p{font-size:17px;color:var(--muted);margin:0 auto 15px}
+.customRows{display:grid;grid-template-columns:1fr 1fr;gap:14px}.customTeamBox{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.11);border-radius:20px;padding:15px}
+.customTeamTitle{font-size:18px;font-weight:900;margin-bottom:10px;color:#fff}.customLabel{display:block;text-align:left;font-size:13px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#aeb7dc;margin:8px 0 5px}
+.customInput{width:100%;border-radius:15px!important;padding:12px 14px!important;font-size:18px!important;outline:none!important}.chipRow{display:flex;flex-wrap:wrap;gap:7px;margin:7px 0 2px}.quickChip{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:#fff;border-radius:999px;padding:7px 10px;font-size:14px;font-weight:800}.quickChip:hover{background:rgba(166,108,255,.24)}
+.customPreview{margin:14px auto 0;padding:11px 15px;border-radius:17px;background:linear-gradient(135deg,rgba(87,168,255,.13),rgba(255,85,200,.13));border:1px solid rgba(255,255,255,.1);font-size:19px;font-weight:900}.customActions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:16px}.customActions button{min-width:150px;min-height:58px;border:0;border-radius:18px;font-weight:900;font-size:17px;padding:10px 16px}.customUse{background:linear-gradient(135deg,#27c979,#54f0a0);color:#06140d}.customCancel{background:rgba(255,255,255,.09);color:#fff;border:1px solid rgba(255,255,255,.14)!important}
+@media(max-width:760px){.customPanel{padding:17px;border-radius:22px}.customPanel h2{font-size:27px}.customRows{grid-template-columns:1fr}.customTeamBox{padding:12px}.quickChip{font-size:13px;padding:6px 9px}}
+
+/* ===== v9 : LJUS NEON-HEADER ===== */
+.topbar{
+  background:linear-gradient(90deg,#f8fbff 0%,#ffffff 48%,#fff8fd 100%)!important;
+  border-bottom:2px solid rgba(87,168,255,.22)!important;
+  box-shadow:0 5px 28px rgba(87,168,255,.10),0 2px 18px rgba(255,85,200,.08)!important;
+}
+.topbar .teamName{
+  color:#20d978!important;
+  text-shadow:0 0 7px rgba(32,217,120,.32),0 0 18px rgba(32,217,120,.18)!important;
+}
+.topbar .brand{
+  color:#fff!important;
+  text-shadow:0 0 5px #fff,0 0 12px #ff55c8,0 0 24px rgba(255,85,200,.85),0 0 38px rgba(87,168,255,.55)!important;
+  background:linear-gradient(90deg,#ff55c8,#ff73d5,#57a8ff,#ff55c8);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  animation:neonSign 3.5s ease-in-out infinite;
+}
+.topbar .roundLabel{color:#54709f!important;text-shadow:none!important}
+.topbar .team .roundLabel{font-weight:900;letter-spacing:.06em}
+.topbar .scoreBubble{background:#111827!important;color:#fff!important;border:2px solid rgba(87,168,255,.75)!important;box-shadow:0 0 12px rgba(87,168,255,.25),inset 0 0 10px rgba(255,255,255,.04)!important}
+.topbar .team.right .scoreBubble{border-color:rgba(255,85,200,.75)!important;box-shadow:0 0 12px rgba(255,85,200,.24),inset 0 0 10px rgba(255,255,255,.04)!important}
+@keyframes neonSign{0%,100%{filter:drop-shadow(0 0 5px rgba(255,85,200,.18))}50%{filter:drop-shadow(0 0 13px rgba(255,85,200,.48))}}
+
+
+/* ===== v9 NEON HEADER – visual direction ===== */
+.topbar{
+  height:92px;flex-basis:92px;padding:8px 16px;gap:18px;
+  background:linear-gradient(90deg,#f8fbff 0%,#fff 45%,#fff7fc 100%)!important;
+  border-bottom:2px solid rgba(87,168,255,.22)!important;
+  box-shadow:0 5px 30px rgba(87,168,255,.12),0 3px 24px rgba(255,85,200,.10)!important;
+}
+.topbar .team{gap:14px;min-width:0}
+.topbar .teamInfo{min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+.topbar .team.right .teamInfo{align-items:flex-end}
+.topbar .teamName{
+  display:block;max-width:390px;padding:6px 12px 7px;border-radius:7px;
+  background:rgba(11,29,27,.94)!important;
+  border:2px solid #20e07d!important;
+  color:#20e07d!important;
+  font-size:25px;font-weight:900;line-height:1;
+  text-shadow:0 0 7px rgba(32,224,125,.45),0 0 18px rgba(32,224,125,.28)!important;
+  box-shadow:0 0 9px rgba(32,224,125,.35),inset 0 0 10px rgba(32,224,125,.08)!important;
+}
+.topbar .roundLabel{margin-top:5px;color:#54709f!important;font-size:12px;font-weight:900;letter-spacing:.07em}
+.topbar .scoreBubble{
+  width:60px;height:60px;flex-basis:60px;background:#101522!important;color:#fff!important;
+  border:3px solid #57a8ff!important;
+  box-shadow:0 0 10px rgba(87,168,255,.55),0 0 22px rgba(87,168,255,.28),inset 0 0 12px rgba(255,255,255,.04)!important;
+  font-size:26px;
+}
+.topbar .team.right .scoreBubble{border-color:#ff55c8!important;box-shadow:0 0 10px rgba(255,85,200,.55),0 0 22px rgba(255,85,200,.28),inset 0 0 12px rgba(255,255,255,.04)!important}
+.brandWrap{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;min-width:340px}
+.brandSign{
+  position:relative;display:flex;align-items:center;justify-content:center;gap:8px;
+  min-width:300px;padding:5px 24px 7px;border-radius:30px;
+  background:rgba(255,255,255,.32);
+  border:3px solid #ff55c8;
+  box-shadow:0 0 7px #fff,0 0 14px rgba(255,85,200,.9),0 0 28px rgba(87,168,255,.45),inset 0 0 16px rgba(255,255,255,.45);
+}
+.brandSign:before,.brandSign:after{content:'♪';position:absolute;font-size:38px;font-weight:900;line-height:1;top:50%;transform:translateY(-50%);color:#57a8ff;text-shadow:0 0 7px #57a8ff,0 0 16px rgba(87,168,255,.85)}
+.brandSign:before{left:-54px}.brandSign:after{right:-54px;color:#ff55c8;text-shadow:0 0 7px #ff55c8,0 0 16px rgba(255,85,200,.85)}
+.brandMic{font-size:29px;filter:drop-shadow(0 0 6px #ff55c8)}
+.brandText{font-size:26px;font-weight:950;letter-spacing:.01em;color:#fff;text-shadow:0 0 5px #fff,0 0 12px #ff55c8,0 0 24px rgba(255,85,200,.85),0 0 34px rgba(87,168,255,.6)}
+.roundBadge{margin-top:-1px;padding:4px 16px;border-radius:10px;background:#12356b;color:#fff;font-size:15px;font-weight:900;border:2px solid #57a8ff;box-shadow:0 0 9px rgba(87,168,255,.55),0 0 18px rgba(87,168,255,.25);z-index:2}
+@media(max-width:900px){
+ .topbar{height:78px;flex-basis:78px;padding:6px 10px;gap:8px}.topbar .team{gap:8px}.topbar .teamName{font-size:18px;max-width:230px;padding:5px 9px}.topbar .scoreBubble{width:48px;height:48px;flex-basis:48px;font-size:21px}.brandWrap{min-width:220px}.brandSign{min-width:210px;padding:4px 14px}.brandText{font-size:19px}.brandMic{font-size:22px}.brandSign:before{left:-32px;font-size:27px}.brandSign:after{right:-32px;font-size:27px}.roundBadge{font-size:11px;padding:3px 11px}.topbar .roundLabel{font-size:10px}}
+@media(max-width:760px){
+ .topbar{height:70px;flex-basis:70px}.topbar .teamName{font-size:15px;max-width:145px}.topbar .scoreBubble{width:44px;height:44px;flex-basis:44px;font-size:19px}.brandWrap{min-width:150px}.brandSign{min-width:145px;padding:4px 8px;border-width:2px}.brandText{font-size:14px}.brandMic{font-size:17px}.brandSign:before,.brandSign:after{display:none}.roundBadge{font-size:9px;padding:2px 8px}}
+</style>
+</head>
+<body>
+<div id="app">
+<header class="topbar">
+  <div class="team">
+    <div class="scoreBubble" id="score1">0</div>
+    <div class="teamInfo"><div class="teamName" id="team1Top">Lag 1</div><div class="roundLabel">LAG 1</div></div>
+  </div>
+  <div class="brandWrap">
+    <div class="brandSign"><span class="brandMic">🎤</span><span class="brandText">KARAOKE-KAOS</span></div>
+    <div class="roundBadge" id="roundTop">Start</div>
+  </div>
+  <div class="team right">
+    <div class="teamInfo"><div class="teamName" id="team2Top">Lag 2</div><div class="roundLabel">LAG 2</div></div>
+    <div class="scoreBubble" id="score2">0</div>
+  </div>
+</header>
+<main>
+<section class="screen active" id="startScreen"><div class="card">
+  <div class="kicker">Samsung Flip • två lag • välj hur ni vill spela</div><h1>🎤 Karaoke-kaos</h1>
+  <p>Välj lag, välj låtkälla och kör igång.</p>
+  <div class="teamForm"><input class="nameInput" id="team1Input" placeholder="Namn på lag 1" maxlength="24"><input class="nameInput" id="team2Input" placeholder="Namn på lag 2" maxlength="24"></div>
+  <div class="modeGrid">
+    <button class="modeBtn" id="modeCustom" onclick="setSongMode('custom')"><span class="emoji">🎵</span>EGEN LÅTLISTA<span class="desc">Skriv in era låtar</span></button>
+    <button class="modeBtn selected" id="modeRandom" onclick="setSongMode('random')"><span class="emoji">🎲</span>SLUMPA LÅTAR<span class="desc">Spelets låtbank</span></button>
+    <button class="modeBtn" id="modeMix" onclick="setSongMode('mix')"><span class="emoji">🔀</span>BLANDA<span class="desc">Era låtar + spelets</span></button>
+  </div>
+  <div class="listBox" id="listBox">
+    <textarea class="songInput" id="songInput" placeholder="Skriv en låt per rad, till exempel:
+Sommartider - Gyllene Tider
+Dancing Queen - ABBA
+Stad i ljus - Tommy Körberg"></textarea>
+    <div class="listHint">Format: <strong>Låttitel - Artist</strong>. Spelet skapar YouTube-karaokesökningen automatiskt.</div>
+  </div>
+  <div class="readRow"><button class="readBtn" onclick="speakStart()">🔊 Läs upp</button></div>
+  <div class="actions"><button class="roundBtn green wide" onclick="startGame()">STARTA<br>SPELET</button></div>
+</div></section>
+
+<section class="screen" id="songScreen"><div class="card">
+<div class="kicker" id="songTeamKicker">Runda 1 • Lag 1 • välj låt</div><div class="songTitle"><span id="songTitle">Låt</span><button class="iconReroll" onclick="rerollSong()" aria-label="Byt låt" title="Byt låt">🔄</button></div><div class="artist" id="songArtist">Artist</div>
+<div class="readRow"><button class="readBtn" onclick="readSong()">🔊 Läs upp</button></div>
+<div class="actions"><button class="roundBtn green wide" onclick="showChallenge()">NÄSTA<br>STEG</button></div>
+<div class="help">Känner ni inte låten? Tryck 🔄 för att byta låt.</div></div></section>
+
+<section class="screen" id="challengeScreen"><div class="card">
+<div class="kicker" id="challengeKicker">Tokversion</div><h1>🎭 Hur ska ni sjunga?</h1><div class="comboWrap"><div class="comboBox"><div class="comboPart" id="stylePill">Robot</div><div class="plus">+</div><div class="comboPart" id="moodPill">Ledsen</div></div><button class="iconReroll" onclick="rerollChallenge()" aria-label="Byt tokversion" title="Byt tokversion">🔄</button></div>
+<p>Det här är <strong>den enda versionen av låten</strong> ni ska sjunga.</p><div class="readRow"><button class="readBtn" onclick="readChallenge()">🔊 Läs upp</button></div>
+<div class="actions"><button class="roundBtn green wide" onclick="startSinging()">▶<br>SJUNG!</button></div>
+<button class="customBtn" onclick="openCustomModal(false)">✏️ SKAPA EGEN TOKIGHET</button>
+<div class="customHint">Kombinera en sak, ett djur eller en karaktär med en känsla eller action.</div>
+<div class="help">Tryck 🔄 tills ni hittar en tokversion som känns rolig.</div></div></section>
+
+<section class="screen" id="singScreen"><div class="card">
+<div class="kicker" id="singKicker">Lag 1 sjunger</div><h1>🎤 KARAOKE-KAOS!</h1><div class="songTitle" id="singSongTitle">Låt</div>
+<div class="comboBox"><div class="comboPart" id="singStyle">Robot</div><div class="plus">+</div><div class="comboPart" id="singMood">Ledsen</div></div>
+<div class="readRow"><button class="readBtn" onclick="readSing()">🔊 Läs upp</button></div><div class="actions"><button class="roundBtn blue" onclick="openKaraoke()">🎤<br>KARAOKE</button><button class="roundBtn red" onclick="stopSinging()">⏹<br>KLAR</button></div>
+<div class="help">Sjunga bara tokversionen! När laget är färdigt: tryck KLAR.</div></div></section>
+
+<section class="screen" id="scoreScreen"><div class="card"><div class="kicker" id="scoreKicker">Motståndarlaget ger poäng</div><h2 id="scoreTitle">Hur gick det?</h2><div class="scoreGrid"><div class="scoreItem"><strong>🎤 Sång</strong><div class="scoreBtns" data-cat="singing"></div></div><div class="scoreItem"><strong>😂 Humor</strong><div class="scoreBtns" data-cat="humor"></div></div><div class="scoreItem"><strong>🤝 Samarbete / kreativitet</strong><div class="scoreBtns" data-cat="creative"></div></div></div><div class="scoreTotal" id="scoreTotal">0 / 15</div><div class="readRow"><button class="readBtn" onclick="readScore()">🔊 Läs upp</button></div><div class="actions"><button class="roundBtn green" onclick="saveScore()">SPARA<br>POÄNG</button></div></div></section>
+
+<section class="screen" id="coopScreen"><div class="card">
+<div class="kicker">Samarbetsrunda • båda lagen</div><h1>🤝 Sjung tillsammans!</h1><div class="songTitle" id="coopSongTitle">Ny låt</div><div class="artist" id="coopArtist">Artist</div>
+<div class="challenge"><strong id="coopLabel1">Lag 1</strong><span class="pill" id="coopStyle1">Robot</span><span>+</span><span class="pill" id="coopMood1">Ledsen</span></div><div class="challenge"><strong id="coopLabel2">Lag 2</strong><span class="pill" id="coopStyle2">Bebis</span><span>+</span><span class="pill" id="coopMood2">Rockstjärna</span></div>
+<div class="readRow"><button class="readBtn" onclick="readCoop()">🔊 Läs upp</button></div><div class="actions"><button class="roundBtn blue" onclick="openCoopKaraoke()">🎤<br>KARAOKE</button><button class="roundBtn yellow" onclick="rerollCoop()">🔄<br>NYA TOKVERSIONER</button><button class="roundBtn green" onclick="scoreCoop()">KLAR<br>→ POÄNG</button></div><button class="customBtn" onclick="openCustomModal(true)">✏️ SKAPA EGNA TOKIGHETER</button>
+<div class="help">Samma nya låt – men varje lag får sin egen tokversion.</div></div></section>
+
+<section class="screen" id="coopScoreScreen"><div class="card"><div class="kicker">Samarbete</div><h2>Hur bra samarbetade lagen?</h2><div class="scoreGrid" style="grid-template-columns:1fr"><div class="scoreItem"><strong>🤝 Samarbete</strong><div class="scoreBtns" data-cat="coop"></div></div></div><div class="scoreTotal" id="coopTotal">0 / 5</div><div class="readRow"><button class="readBtn" onclick="speak('Välj en samarbets-poäng från ett till fem.')">🔊 Läs upp</button></div><div class="actions"><button class="roundBtn green" onclick="saveCoop()">SPARA<br>POÄNG</button></div></div></section>
+
+<section class="screen" id="nextScreen"><div class="card"><div class="kicker" id="nextKicker">Rundan är klar</div><h1>Bra jobbat!</h1><p>Vill ni köra en runda till med samma lag?</p><div class="readRow"><button class="readBtn" onclick="speakNext()">🔊 Läs upp</button></div><div class="actions"><button class="roundBtn green" onclick="nextRound()">NY<br>RUNDA</button><button class="roundBtn yellow" onclick="showResults()">RESULTAT</button></div></div></section>
+
+<section class="screen" id="resultsScreen"><div class="card"><div class="kicker">Slutresultat</div><h1 id="resultStatus">Resultat</h1><div class="results"><div class="resultTeam"><div class="teamName" id="resultName1">Lag 1</div><div class="big" id="resultScore1">0</div></div><div class="resultTeam"><div class="teamName" id="resultName2">Lag 2</div><div class="big" id="resultScore2">0</div></div></div><div class="readRow"><button class="readBtn" onclick="readResults()">🔊 Läs upp</button></div><div class="actions"><button class="roundBtn green" onclick="restart()">NYTT<br>SPEL</button></div></div></section>
+</main>
+<div class="customModal" id="customModal" aria-hidden="true">
+  <div class="customPanel">
+    <h2>✏️ Skapa egen tokighet</h2>
+    <p id="customModalText">Välj eller skriv en sak, ett djur eller en karaktär + en känsla eller action.</p>
+    <div class="customRows" id="customRows"></div>
+    <div class="customActions">
+      <button class="customCancel" onclick="closeCustomModal()">AVBRYT</button>
+      <button class="customUse" onclick="applyCustomChallenges()">ANVÄND TOKIGHET</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+</div>
+<script>
+const DATA={songs:[{"title":"Stad i ljus","artist":"Tommy Körberg","language":"Svenska","genre":"Ballad"},{"title":"Dancing Queen","artist":"ABBA","language":"English","genre":"Pop/Disco"},{"title":"Genom eld och vatten","artist":"Sarek","language":"Svenska","genre":"Schlager"},{"title":"I Want It That Way","artist":"Backstreet Boys","language":"English","genre":"Pop"},{"title":"Säg mig var du står","artist":"Carola Häggkvist","language":"Svenska","genre":"Pop"},{"title":"Bohemian Rhapsody","artist":"Queen","language":"English","genre":"Rock"},{"title":"Vindarna viskar mitt namn","artist":"Roger Pontare","language":"Svenska","genre":"Schlager"},{"title":"Eloise","artist":"Arvingarna","language":"Svenska","genre":"Dansband"},{"title":"Kung för en dag","artist":"Magnus Uggla","language":"Svenska","genre":"Pop/Rock"},{"title":"Don't Stop Believin'","artist":"Journey","language":"English","genre":"Rock"},{"title":"Jag kommer","artist":"Veronica Maggio","language":"Svenska","genre":"Pop"},{"title":"Jag ljuger så bra","artist":"Linda Bengtzing","language":"Svenska","genre":"Schlager"},{"title":"Wannabe","artist":"Spice Girls","language":"English","genre":"Pop"},{"title":"Fångad av en stormvind","artist":"Carola Häggkvist","language":"Svenska","genre":"Schlager"},{"title":"Främling","artist":"Carola Häggkvist","language":"Svenska","genre":"Pop"},{"title":"Det gör ont","artist":"Lena Philipsson","language":"Svenska","genre":"Pop/Schlager"},{"title":"Mamma Mia","artist":"ABBA","language":"English","genre":"Pop"},{"title":"Barbie Girl","artist":"Aqua","language":"English","genre":"Eurodance"},{"title":"Wonderwall","artist":"Oasis","language":"English","genre":"Rock"},{"title":"Total Eclipse of the Heart","artist":"Bonnie Tyler","language":"English","genre":"Pop/Rock"},{"title":"Mister Cool","artist":"Snook","language":"Svenska","genre":"Hip-hop"},{"title":"Vill ha dej","artist":"Freestyle","language":"Svenska","genre":"Pop"},{"title":"Känn ingen sorg för mig Göteborg","artist":"Håkan Hellström","language":"Svenska","genre":"Pop/Rock"},{"title":"...Baby One More Time","artist":"Britney Spears","language":"English","genre":"Pop"},{"title":"Händerna mot himlen","artist":"Petra Marklund","language":"Svenska","genre":"Pop"},{"title":"17 år","artist":"Veronica Maggio","language":"Svenska","genre":"Pop"},{"title":"Svag","artist":"Victor Leksell","language":"Svenska","genre":"Pop"},{"title":"Don't Look Back in Anger","artist":"Oasis","language":"English","genre":"Rock"},{"title":"Livin' on a Prayer","artist":"Bon Jovi","language":"English","genre":"Rock"},{"title":"Sommartider","artist":"Gyllene Tider","language":"Svenska","genre":"Pop/Rock"},{"title":"Mr. Brightside","artist":"The Killers","language":"English","genre":"Rock"},{"title":"Inget stoppar oss nu","artist":"Black Jack","language":"Svenska","genre":"Dansband"},{"title":"Välkommen in","artist":"Veronica Maggio","language":"Svenska","genre":"Pop"},{"title":"Alla flickor","artist":"Linda Bengtzing","language":"Svenska","genre":"Schlager"},{"title":"Summer of '69","artist":"Bryan Adams","language":"English","genre":"Rock"},{"title":"Värsta schlagern","artist":"Linda Bengtzing & Markoolio","language":"Svenska","genre":"Schlager"},{"title":"Gimme! Gimme! Gimme!","artist":"ABBA","language":"English","genre":"Pop/Disco"},{"title":"En kväll i juni","artist":"Lasse Berghagen","language":"Svenska","genre":"Visa"},{"title":"Lose Yourself","artist":"Eminem","language":"English","genre":"Hip-hop"},{"title":"Don't Stop Me Now","artist":"Queen","language":"English","genre":"Rock"},{"title":"9 to 5","artist":"Dolly Parton","language":"English","genre":"Country"},{"title":"Hold Me Closer","artist":"Cornelia Jakobs","language":"English","genre":"Pop"},{"title":"Waterloo","artist":"ABBA","language":"English","genre":"Pop"},{"title":"The Winner Takes It All","artist":"ABBA","language":"English","genre":"Pop"},{"title":"Super Trouper","artist":"ABBA","language":"English","genre":"Pop"},{"title":"Fernando","artist":"ABBA","language":"English","genre":"Pop"},{"title":"Take a Chance on Me","artist":"ABBA","language":"English","genre":"Pop"},{"title":"Thank You for the Music","artist":"ABBA","language":"English","genre":"Pop"},{"title":"S.O.S.","artist":"ABBA","language":"English","genre":"Pop"},{"title":"Take On Me","artist":"a-ha","language":"English","genre":"Pop/Rock"},{"title":"Sweet Caroline","artist":"Neil Diamond","language":"English","genre":"Pop"},{"title":"Girls Just Want to Have Fun","artist":"Cyndi Lauper","language":"English","genre":"Pop"},{"title":"It's Raining Men","artist":"The Weather Girls","language":"English","genre":"Disco"},{"title":"YMCA","artist":"Village People","language":"English","genre":"Disco"},{"title":"Eye of the Tiger","artist":"Survivor","language":"English","genre":"Rock"},{"title":"We Will Rock You","artist":"Queen","language":"English","genre":"Rock"},{"title":"We Are the Champions","artist":"Queen","language":"English","genre":"Rock"},{"title":"Summer Nights","artist":"John Travolta & Olivia Newton-John","language":"English","genre":"Musical"},{"title":"I Will Survive","artist":"Gloria Gaynor","language":"English","genre":"Disco"},{"title":"Wake Me Up Before You Go-Go","artist":"Wham!","language":"English","genre":"Pop"},{"title":"Careless Whisper","artist":"George Michael","language":"English","genre":"Pop"},{"title":"Footloose","artist":"Kenny Loggins","language":"English","genre":"Pop/Rock"},{"title":"I Love Rock 'n Roll","artist":"Joan Jett & The Blackhearts","language":"English","genre":"Rock"},{"title":"It's My Life","artist":"Bon Jovi","language":"English","genre":"Rock"},{"title":"What's Up?","artist":"4 Non Blondes","language":"English","genre":"Rock"},{"title":"Zombie","artist":"The Cranberries","language":"English","genre":"Rock"},{"title":"Rolling in the Deep","artist":"Adele","language":"English","genre":"Pop"},{"title":"Someone Like You","artist":"Adele","language":"English","genre":"Pop"},{"title":"Shallow","artist":"Lady Gaga & Bradley Cooper","language":"English","genre":"Pop"},{"title":"Bad Romance","artist":"Lady Gaga","language":"English","genre":"Pop"},{"title":"Poker Face","artist":"Lady Gaga","language":"English","genre":"Pop"},{"title":"Shake It Off","artist":"Taylor Swift","language":"English","genre":"Pop"},{"title":"Happy","artist":"Pharrell Williams","language":"English","genre":"Pop"},{"title":"Uptown Funk","artist":"Mark Ronson ft. Bruno Mars","language":"English","genre":"Funk/Pop"},{"title":"Valerie","artist":"Mark Ronson ft. Amy Winehouse","language":"English","genre":"Soul/Pop"},{"title":"Respect","artist":"Aretha Franklin","language":"English","genre":"Soul"},{"title":"Stand by Me","artist":"Ben E. King","language":"English","genre":"Soul"},{"title":"Superstition","artist":"Stevie Wonder","language":"English","genre":"Funk/Soul"},{"title":"Hotel California","artist":"Eagles","language":"English","genre":"Rock"},{"title":"Sweet Home Alabama","artist":"Lynyrd Skynyrd","language":"English","genre":"Rock"},{"title":"Proud Mary","artist":"Tina Turner","language":"English","genre":"Rock/Soul"},{"title":"Simply the Best","artist":"Tina Turner","language":"English","genre":"Pop/Rock"},{"title":"Listen to Your Heart","artist":"Roxette","language":"English","genre":"Pop/Rock"},{"title":"The Look","artist":"Roxette","language":"English","genre":"Pop/Rock"},{"title":"It Must Have Been Love","artist":"Roxette","language":"English","genre":"Pop"},{"title":"Sleeping in My Car","artist":"Roxette","language":"English","genre":"Pop/Rock"},{"title":"Dressed for Success","artist":"Roxette","language":"English","genre":"Pop/Rock"},{"title":"När vi gräver guld i USA","artist":"Gyllene Tider","language":"Svenska","genre":"Pop"},{"title":"Leva livet","artist":"Gyllene Tider","language":"Svenska","genre":"Pop"},{"title":"Bra vibrationer","artist":"Kikki Danielsson","language":"Svenska","genre":"Schlager"},{"title":"Michelangelo","artist":"Björn Skifs","language":"Svenska","genre":"Pop"},{"title":"Håll mitt hjärta","artist":"Björn Skifs","language":"Svenska","genre":"Ballad"},{"title":"Hooked on a Feeling","artist":"Blue Swede","language":"English","genre":"Pop/Rock"}],tokVersions:[{"style":"sjung som en robot","feeling":"överlycklig"},{"style":"sjung som en robot","feeling":"jättearg"},{"style":"sjung som en operasångare","feeling":"supertrött"},{"style":"sjung som en rockstjärna","feeling":"livrädd"},{"style":"sjung som ett litet barn","feeling":"jätteviktig"},{"style":"sjung som en gammal radio","feeling":"romantiskt"},{"style":"sjung som en pirat","feeling":"förälskad"},{"style":"sjung som en alien","feeling":"jätteledsen"},{"style":"sjung som om du precis vaknat","feeling":"överdrivet dramatisk"},{"style":"sjung som en nyhetsuppläsare","feeling":"jätteglad"},{"style":"sjung som en discostjärna","feeling":"förvirrad"},{"style":"sjung som en cowboy","feeling":"jätteblyg"},{"style":"sjung som om du är på en fotbollsmatch","feeling":"supernervös"},{"style":"sjung som en superhjälte","feeling":"jättearg"},{"style":"sjung extremt långsamt","feeling":"väldigt lycklig"},{"style":"sjung som om du håller på att somna","feeling":"jätteentusiastisk"},{"style":"sjung som om du är på månen","feeling":"helt chockad"},{"style":"sjung som en hårdrockare","feeling":"jätteförälskad"},{"style":"sjung som om du vunnit en miljon","feeling":"lite irriterad"},{"style":"sjung med världens största leende","feeling":"jätteledsen"}]};
+let state={team1:"Lag 1",team2:"Lag 2",scores:[0,0],round:1,currentTeam:0,starter:0,phase:"starter",songMode:"random",songPool:[],teamSongs:[null,null],teamChallenges:[null,null],usedSongs:[],coopSong:null,coopChallenges:[null,null],scoreSelections:{singing:0,humor:0,creative:0},coopSelection:0};
+function $(id){return document.getElementById(id)}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');updateTop()}
+function updateTop(){$("team1Top").textContent=state.team1;$('team2Top').textContent=state.team2;$('score1').textContent=state.scores[0];$('score2').textContent=state.scores[1];$('roundTop').textContent=state.round?"Runda "+state.round:"Start"}
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+function speak(text){if(!('speechSynthesis' in window)){toast('Uppläsning stöds inte på denna enhet.');return}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='sv-SE';speechSynthesis.speak(u)}
+function speakStart(){speak('Karaoke-kaos. Välj två lag och välj hur ni vill spela. Egen låtlista, slumpmässiga låtar eller blanda båda. Skriv en låt per rad i formatet låttitel, bindestreck, artist.')}
+function setSongMode(mode){state.songMode=mode;['custom','random','mix'].forEach(m=>$('mode'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('selected',m===mode));$('listBox').classList.toggle('show',mode!=='random')}
+function parseCustomSongs(){
+  const raw=$('songInput').value||'';
+  const lines=raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const songs=[];
+  for(const line of lines){
+    // Accept the normal format: Title - Artist, plus en/em dash variants.
+    const m=line.match(/^(.*?)\s*(?:-|–|—)\s*(.+)$/);
+    if(m){
+      const title=m[1].trim();
+      const artist=m[2].trim();
+      if(title && artist) songs.push({title,artist,language:'',genre:''});
+    } else {
+      // A title without an artist is still usable for a YouTube search.
+      songs.push({title:line,artist:'',language:'',genre:''});
+    }
+  }
+  return songs;
+}
+
+function buildPool(){
+  const custom=parseCustomSongs();
+  if(state.songMode==='custom'){
+    if(!custom.length){toast('Skriv in minst en låt för att använda Egen låtlista.');return false;}
+    state.songPool=custom;
+  }else if(state.songMode==='random'){
+    state.songPool=[...DATA.songs];
+  }else{
+    state.songPool=[...custom,...DATA.songs];
+  }
+  return state.songPool.length>0;
+}
+function keySong(s){return(s.title+'||'+s.artist).toLowerCase()}
+function randomItem(arr){return arr[Math.floor(Math.random()*arr.length)]}
+function pickSong(){let pool=state.songPool.filter(s=>!state.usedSongs.includes(keySong(s)));if(!pool.length){state.usedSongs=[];pool=[...state.songPool]}const song=randomItem(pool);state.usedSongs.push(keySong(song));return song}
+function pickChallenge(){return randomItem(DATA.tokVersions)}
+function startGame(){if(!buildPool())return;state.team1=$('team1Input').value.trim()||'Lag 1';state.team2=$('team2Input').value.trim()||'Lag 2';state.scores=[5,5];state.round=1;state.usedSongs=[];state.starter=Math.random()<.5?0:1;state.currentTeam=state.starter;state.phase='starter';prepareRound();showSong()}
+function prepareRound(){state.teamSongs=[pickSong(),pickSong()];state.teamChallenges=[pickChallenge(),pickChallenge()];state.coopSong=pickSong();state.coopChallenges=[pickChallenge(),pickChallenge()]}
+function currentTeamName(){return state.currentTeam===0?state.team1:state.team2}
+function showSong(){const t=state.currentTeam,s=state.teamSongs[t];$('songTeamKicker').textContent='Runda '+state.round+' • '+currentTeamName()+' • välj låt';$('songTitle').textContent=s.title;$('songArtist').textContent=s.artist;show('songScreen')}
+function rerollSong(){state.teamSongs[state.currentTeam]=pickSong();showSong();toast('Ny låt!')}
+function karaokeUrl(song){return'https://www.youtube.com/results?search_query='+encodeURIComponent(song.title+' '+song.artist+' karaoke')}
+function openKaraoke(){window.open(karaokeUrl(state.teamSongs[state.currentTeam]),'_blank','noopener')}
+function readSong(){const s=state.teamSongs[state.currentTeam];speak(s.title+' av '+s.artist+'.')}
+const QUICK_THINGS=['en robot','en bebis','en dinosaurie','en katt','en pirat','en rockstjärna','en superhjälte','en alien','en cowboy','en gammal gubbe','en prinsessa','en kyckling'];
+const QUICK_FEELINGS=['jätteglad','jättearg','livrädd','jätteledsen','jättetrött','förälskad','supernervös','förvirrad','dansande','superlångsam','överdrivet dramatisk','jätteentusiastisk'];
+let customModalCoop=false;
+function openCustomModal(coop){customModalCoop=coop;const rows=$('customRows');rows.innerHTML='';const count=coop?2:1;for(let i=0;i<count;i++){const box=document.createElement('div');box.className='customTeamBox';const label=coop?('<div class="customTeamTitle">'+(i===0?state.team1:state.team2)+'</div>'):'';box.innerHTML=label+'<label class="customLabel">Sak / djur / karaktär</label><input class="customInput customThing" data-index="'+i+'" placeholder="t.ex. en dinosaurie"><div class="chipRow">'+QUICK_THINGS.map(x=>'<button type="button" class="quickChip" data-kind="thing" data-index="'+i+'">'+x+'</button>').join('')+'</div><label class="customLabel">Känsla / action / sätt</label><input class="customInput customFeeling" data-index="'+i+'" placeholder="t.ex. livrädd eller dansande"><div class="chipRow">'+QUICK_FEELINGS.map(x=>'<button type="button" class="quickChip" data-kind="feeling" data-index="'+i+'">'+x+'</button>').join('')+'</div><div class="customPreview" id="customPreview'+i+'">— + —</div>';rows.appendChild(box)}rows.querySelectorAll('.quickChip').forEach(b=>b.onclick=()=>{const idx=b.dataset.index;const input=rows.querySelector('.custom'+(b.dataset.kind==='thing'?'Thing':'Feeling')+'[data-index="'+idx+'"]');input.value=b.textContent;updateCustomPreview(idx)});rows.querySelectorAll('.customInput').forEach(inp=>inp.addEventListener('input',()=>updateCustomPreview(inp.dataset.index)));$('customModal').classList.add('show');$('customModal').setAttribute('aria-hidden','false');}
+function updateCustomPreview(i){const t=document.querySelector('.customThing[data-index="'+i+'"]')?.value.trim()||'—';const f=document.querySelector('.customFeeling[data-index="'+i+'"]')?.value.trim()||'—';const el=$('customPreview'+i);if(el)el.textContent=t+' + '+f}
+function closeCustomModal(){$('customModal').classList.remove('show');$('customModal').setAttribute('aria-hidden','true')}
+function buildCustomChallenge(i){const t=document.querySelector('.customThing[data-index="'+i+'"]')?.value.trim();const f=document.querySelector('.customFeeling[data-index="'+i+'"]')?.value.trim();if(!t||!f)return null;return{style:'sjung som '+t,feeling:f}}
+function applyCustomChallenges(){const count=customModalCoop?2:1;const built=[];for(let i=0;i<count;i++){const c=buildCustomChallenge(i);if(!c){toast('Fyll i både tokighet och känsla/action.');return}built.push(c)}if(customModalCoop){state.coopChallenges=built;renderCoop();toast('Egna tokigheter för båda lagen!')}else{state.teamChallenges[state.currentTeam]=built[0];showChallenge();toast('Egen tokighet skapad!')}closeCustomModal()}
+function showChallenge(){const c=state.teamChallenges[state.currentTeam];$('challengeKicker').textContent='Runda '+state.round+' • '+currentTeamName()+' • tokversion';$('stylePill').textContent=c.style;$('moodPill').textContent=c.feeling;show('challengeScreen')}
+function rerollChallenge(){const old=state.teamChallenges[state.currentTeam];let c=pickChallenge(),n=0;while(c.style===old.style&&c.feeling===old.feeling&&n<12){c=pickChallenge();n++}state.teamChallenges[state.currentTeam]=c;showChallenge();toast('Ny tokversion!')}
+function readChallenge(){const c=state.teamChallenges[state.currentTeam];speak(c.style+' och '+c.feeling+'. Det här är den enda versionen av låten ni ska sjunga.')}
+function startSinging(){const t=state.currentTeam,s=state.teamSongs[t],c=state.teamChallenges[t];$('singKicker').textContent=currentTeamName()+' sjunger';$('singSongTitle').textContent=s.title;$('singStyle').textContent=c.style;$('singMood').textContent=c.feeling;show('singScreen')}
+function readSing(){const s=state.teamSongs[state.currentTeam],c=state.teamChallenges[state.currentTeam];speak(s.title+' av '+s.artist+'. '+c.style+' och '+c.feeling+'.')}
+function stopSinging(){buildScoreButtons();const t=state.currentTeam;$('scoreKicker').textContent=(t===0?state.team2:state.team1)+' ger poäng till '+currentTeamName();$('scoreTitle').textContent='Bedöm '+currentTeamName();state.scoreSelections={singing:0,humor:0,creative:0};updateScoreUI();show('scoreScreen')}
+function buildScoreButtons(){document.querySelectorAll('.scoreBtns[data-cat]').forEach(box=>{if(box.dataset.cat==='coop')return;box.innerHTML='';for(let i=1;i<=5;i++){const b=document.createElement('button');b.className='scoreBtn';b.textContent=i;b.dataset.value=i;b.dataset.cat=box.dataset.cat;b.onclick=()=>{state.scoreSelections[box.dataset.cat]=i;updateScoreUI()};box.appendChild(b)}})}
+function updateScoreUI(){document.querySelectorAll('.scoreBtn').forEach(b=>{const cat=b.dataset.cat;b.classList.toggle('selected',cat==='coop'?+b.dataset.value===state.coopSelection:+b.dataset.value===state.scoreSelections[cat])});$('scoreTotal').textContent=Object.values(state.scoreSelections).reduce((a,b)=>a+b,0)+' / 15';$('coopTotal').textContent=state.coopSelection+' / 5'}
+function readScore(){speak('Bedöm '+currentTeamName()+'. Välj poäng för sång, humor och samarbete eller kreativitet. Varje kategori ger mellan ett och fem poäng.')}
+function saveScore(){const v=state.scoreSelections;if(!v.singing||!v.humor||!v.creative){toast('Välj poäng i alla tre kategorier.');return}state.scores[state.currentTeam]+=v.singing+v.humor+v.creative;updateTop();if(state.phase==='starter'){state.phase='cooperation';renderCoop();show('coopScreen')}else{state.phase='done';$('nextKicker').textContent='Runda '+state.round+' klar';show('nextScreen')}}
+function renderCoop(){const c1=state.coopChallenges[0],c2=state.coopChallenges[1];$('coopSongTitle').textContent=state.coopSong.title;$('coopArtist').textContent=state.coopSong.artist;$('coopLabel1').textContent=state.team1;$('coopLabel2').textContent=state.team2;$('coopStyle1').textContent=c1.style;$('coopMood1').textContent=c1.feeling;$('coopStyle2').textContent=c2.style;$('coopMood2').textContent=c2.feeling}
+function rerollCoop(){state.coopChallenges=[pickChallenge(),pickChallenge()];renderCoop();toast('Nya tokversioner för båda lagen!')}
+function openCoopKaraoke(){window.open(karaokeUrl(state.coopSong),'_blank','noopener')}
+function readCoop(){const c1=state.coopChallenges[0],c2=state.coopChallenges[1];speak(state.coopSong.title+' av '+state.coopSong.artist+'. '+state.team1+' sjunger '+c1.style+' och '+c1.feeling+'. '+state.team2+' sjunger '+c2.style+' och '+c2.feeling+'.')}
+function scoreCoop(){const box=document.querySelector('.scoreBtns[data-cat="coop"]');box.innerHTML='';state.coopSelection=0;for(let i=1;i<=5;i++){const b=document.createElement('button');b.className='scoreBtn';b.textContent=i;b.dataset.value=i;b.dataset.cat='coop';b.onclick=()=>{state.coopSelection=i;updateScoreUI()};box.appendChild(b)}updateScoreUI();show('coopScoreScreen')}
+function saveCoop(){if(!state.coopSelection){toast('Välj en samarbets-poäng.');return}state.scores[0]+=state.coopSelection;state.scores[1]+=state.coopSelection;updateTop();state.currentTeam=state.starter===0?1:0;state.phase='second';showSong()}
+function nextRound(){state.round++;state.starter=state.starter===0?1:0;state.currentTeam=state.starter;state.phase='starter';prepareRound();showSong()}
+function speakNext(){speak('Runda '+state.round+' är klar. Ni kan välja ny runda eller gå till resultatet.')}
+function showResults(){$('resultName1').textContent=state.team1;$('resultName2').textContent=state.team2;$('resultScore1').textContent=state.scores[0];$('resultScore2').textContent=state.scores[1];$('resultStatus').textContent=state.scores[0]===state.scores[1]?'Oavgjort!':(state.scores[0]>state.scores[1]?state.team1:state.team2)+' vinner!';show('resultsScreen')}
+function readResults(){speak(state.team1+' har '+state.scores[0]+' poäng. '+state.team2+' har '+state.scores[1]+' poäng.')}
+function restart(){location.reload()}
+updateTop();buildScoreButtons();
+</script>
+</body>
+</html>
