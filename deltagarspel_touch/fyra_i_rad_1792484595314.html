@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Fyra i rad</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f4f6;color:#202124;font-family:Arial,sans-serif;display:flex;justify-content:center;min-height:100vh;overflow:hidden}
+.app{width:min(780px,100%);padding:5px 8px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+h1{font-size:22px;margin:0}
+button{font:inherit;border:0;border-radius:10px;padding:8px 12px;background:#fff;box-shadow:0 2px 7px #0001;cursor:pointer;touch-action:manipulation}
+button:active{transform:scale(.98)}
+.top{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:4px}
+.pill{background:#fff;border-radius:999px;padding:5px 9px;box-shadow:0 2px 7px #0001;font-weight:700}
+.boardWrap{background:#1769aa;border-radius:16px;padding:7px;box-shadow:0 5px 16px #0002;max-width:560px;margin:auto}
+.board{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.slot{aspect-ratio:1;border-radius:50%;background:#f3f4f6;box-shadow:inset 0 3px 7px #0003;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.disc{width:82%;height:82%;border-radius:50%;box-shadow:inset 0 -4px 6px #0003,0 2px 4px #0003}
+.empty{background:#fff}
+.red{background:#e53935}
+.yellow{background:#f6c945}
+.drop{animation:drop .18s ease-out}
+@keyframes drop{from{transform:translateY(-25px);opacity:.2}to{transform:translateY(0);opacity:1}}
+.win{outline:5px solid #7cff9a;box-shadow:0 0 0 3px #14532d,inset 0 3px 7px #0003}
+.controls{text-align:center;margin:6px 0}
+.msg{text-align:center;min-height:22px;font-size:16px;font-weight:700;margin:2px}
+.players{display:flex;justify-content:center;gap:8px;margin:5px 0;flex-wrap:wrap}
+.player{padding:5px 10px;border-radius:11px;background:#fff;box-shadow:0 2px 7px #0001}
+.active{outline:2px solid #222}
+.dot{display:inline-block;width:17px;height:17px;border-radius:50%;vertical-align:-4px;margin-right:5px}
+.redDot{background:#e53935}.yellowDot{background:#f6c945;border:1px solid #8b7a22}
+.overlay{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;padding:20px;z-index:5}
+.card{background:#fff;border-radius:22px;padding:24px;max-width:520px;width:100%;text-align:center;box-shadow:0 15px 40px #0005}
+.card h2{font-size:40px;margin:5px 0 12px}.card p{font-size:21px}
+.help{text-align:left}.help h3{margin-bottom:5px}.help p{margin-top:5px}
+@media(max-width:650px){body{overflow:auto}.app{padding:7px}.app header{align-items:flex-start}h1{font-size:21px}.app header button{padding:7px 9px;font-size:13px}.boardWrap{padding:7px}.board{gap:4px}.players{gap:5px}.player{padding:5px 9px;font-size:14px}.msg{font-size:15px;min-height:23px}.controls{margin:4px 0}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+<h1>🔴 Fyra i rad</h1>
+<div>
+<button id="helpBtn">❓ Hur spelar man?</button>
+<button id="newBtn">↻ Ny omgång</button>
+</div>
+</header>
+
+<div class="top">
+<div class="pill">7 × 6 spelplan</div>
+<div class="pill">2 spelare</div>
+<div class="pill">🏆 <span id="score">0 – 0</span></div>
+</div>
+
+<div class="players">
+<div class="player active" id="p1"><span class="dot redDot"></span>Spelare 1</div>
+<div class="player" id="p2"><span class="dot yellowDot"></span>Spelare 2</div>
+</div>
+
+<div class="msg" id="msg">Spelare 1 börjar – tryck på en kolumn.</div>
+<div class="boardWrap"><div class="board" id="board"></div></div>
+<div class="controls"><button id="resetScore">Nollställ poäng</button></div>
+</div>
+
+<div class="overlay" id="overlay">
+<div class="card">
+<h2 id="winTitle"></h2>
+<p id="winText"></p>
+<button id="againBtn">↻ Spela igen</button>
+</div>
+</div>
+
+<div class="overlay" id="help">
+<div class="card help">
+<h2>❓ Hur spelar man?</h2>
+<h3>🎯 Målet</h3>
+<p>Försök få <strong>fyra av dina brickor i rad</strong>.</p>
+<h3>👇 Så gör ni</h3>
+<p>Tryck på en kolumn. Din bricka faller ner till den lägsta lediga platsen.</p>
+<p>Ni turas om att lägga en bricka.</p>
+<h3>🏆 Du vinner när</h3>
+<p>Du får fyra egna brickor vågrätt, lodrätt eller diagonalt.</p>
+<h3>🤝 Om ingen får fyra</h3>
+<p>Om hela spelplanen blir full utan att någon får fyra i rad blir det oavgjort.</p>
+<p><strong>Det finns inget fel val.</strong> Prova en kolumn och se vad som händer!</p>
+<button id="closeHelp">Stäng</button>
+<button id="speakHelp">🔊 Läs upp</button>
+</div>
+</div>
+
+<script>
+const ROWS=6,COLS=7;
+let board=[],turn=1,gameOver=false,score=[0,0],winning=[];
+const boardEl=document.getElementById('board');
+const msg=document.getElementById('msg');
+
+function init(){
+ board=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+ turn=1;gameOver=false;winning=[];
+ render();
+ msg.textContent='Spelare 1 börjar – tryck på en kolumn.';
+ updatePlayers();
+}
+function render(){
+ boardEl.innerHTML='';
+ for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+  const slot=document.createElement('div');slot.className='slot';
+  slot.dataset.col=c;
+  const v=board[r][c];
+  const d=document.createElement('div');
+  d.className='disc '+(v===1?'red':v===2?'yellow':'empty');
+  if(v)d.classList.add('drop');
+  if(winning.some(x=>x[0]===r&&x[1]===c))d.classList.add('win');
+  slot.appendChild(d);
+  slot.addEventListener('click',()=>play(c));
+  boardEl.appendChild(slot);
+ }
+}
+function play(c){
+ if(gameOver)return;
+ let r=-1;
+ for(let i=ROWS-1;i>=0;i--)if(board[i][c]===0){r=i;break}
+ if(r<0){
+  msg.textContent='Den kolumnen är full – prova en annan kolumn.';
+  return;
+ }
+ board[r][c]=turn;
+ const win=findWin(r,c,turn);
+ render();
+ if(win){
+  winning=win; render();
+  gameOver=true;score[turn-1]++;
+  document.getElementById('score').textContent=score[0]+' – '+score[1];
+  const name='Spelare '+turn;
+  msg.textContent=name+' vann!';
+  setTimeout(()=>showWin(name),280);
+  return;
+ }
+ if(board.every(row=>row.every(Boolean))){
+  gameOver=true;msg.textContent='Oavgjort – spelplanen är full!';
+  setTimeout(()=>showWin('Oavgjort'),280);return;
+ }
+ turn=turn===1?2:1;
+ updatePlayers();
+ msg.textContent='Spelare '+turn+' – tryck på en kolumn.';
+}
+function findWin(r,c,p){
+ const dirs=[[0,1],[1,0],[1,1],[1,-1]];
+ for(const [dr,dc] of dirs){
+  let cells=[[r,c]];
+  for(const s of [1,-1]){
+   let rr=r+dr*s,cc=c+dc*s;
+   while(rr>=0&&rr<ROWS&&cc>=0&&cc<COLS&&board[rr][cc]===p){
+    cells.push([rr,cc]);rr+=dr*s;cc+=dc*s;
+   }
+  }
+  if(cells.length>=4)return cells.slice(0,4);
+ }
+ return null;
+}
+function updatePlayers(){
+ document.getElementById('p1').classList.toggle('active',turn===1);
+ document.getElementById('p2').classList.toggle('active',turn===2);
+}
+function showWin(name){
+ document.getElementById('winTitle').textContent=name==='Oavgjort'?'🤝 Oavgjort!':'🏆 '+name+' vann!';
+ document.getElementById('winText').textContent=name==='Oavgjort'?'Ingen fick fyra i rad den här gången.':'Snyggt spelat! Vill ni spela en omgång till?';
+ document.getElementById('overlay').style.display='flex';
+}
+document.getElementById('newBtn').onclick=()=>{document.getElementById('overlay').style.display='none';init()};
+document.getElementById('againBtn').onclick=()=>{document.getElementById('overlay').style.display='none';init()};
+document.getElementById('resetScore').onclick=()=>{score=[0,0];document.getElementById('score').textContent='0 – 0';init()};
+document.getElementById('helpBtn').onclick=()=>document.getElementById('help').style.display='flex';
+document.getElementById('closeHelp').onclick=()=>document.getElementById('help').style.display='none';
+document.getElementById('speakHelp').onclick=()=>{
+ const text='Hur spelar man? Målet är att få fyra av dina brickor i rad. Tryck på en kolumn. Din bricka faller ner till den lägsta lediga platsen. Ni turas om. Du vinner när du får fyra egna brickor vågrätt, lodrätt eller diagonalt. Om spelplanen blir full utan vinnare blir det oavgjort.';
+ speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='sv-SE';speechSynthesis.speak(u);
+};
+init();
+</script>
+</body>
+</html>
